@@ -16,15 +16,15 @@ func onReady() {
 	systray.SetIcon(getIcon("icon.ico"))
 	systray.SetTooltip("Toggle between light and dark app mode")
 
-	mToggle := systray.AddMenuItem("Toggle app mode", "Toggle between light and dark app mode")
-	mQuit := systray.AddMenuItem("Quit", "Quit the app")
+	toggleItem := systray.AddMenuItem("Toggle app mode", "Toggle between light and dark app mode")
+	quitItem := systray.AddMenuItem("Quit", "Quit the app")
 
 	go func() {
 		for {
 			select {
-			case <-mToggle.ClickedCh:
-				toggleTheme()
-			case <-mQuit.ClickedCh:
+			case <-toggleItem.ClickedCh:
+				toggleMode()
+			case <-quitItem.ClickedCh:
 				systray.Quit()
 			}
 		}
@@ -34,7 +34,7 @@ func onReady() {
 func onExit() {
 }
 
-func toggleTheme() {
+func toggleMode() {
 	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
 		log.Fatalf("Failed to open registry key: %v", err)
@@ -46,21 +46,21 @@ func toggleTheme() {
 		}
 	}(key)
 
-	lightTheme, _, err := key.GetIntegerValue("AppsUseLightTheme")
+	currentMode, _, err := key.GetIntegerValue("AppsUseLightTheme")
 	if err != nil {
 		log.Fatalf("Failed to read AppsUseLightTheme: %v", err)
 	}
 
-	var newTheme uint32
-	if lightTheme == 0 {
-		newTheme = 1
+	var newMode uint32
+	if currentMode == 0 {
+		newMode = 1
 		fmt.Println("Switching to light app mode...")
 	} else {
-		newTheme = 0
+		newMode = 0
 		fmt.Println("Switching to dark app mode...")
 	}
 
-	err = key.SetDWordValue("AppsUseLightTheme", newTheme)
+	err = key.SetDWordValue("AppsUseLightTheme", newMode)
 	if err != nil {
 		log.Fatalf("Failed to set AppsUseLightTheme: %v", err)
 	}
