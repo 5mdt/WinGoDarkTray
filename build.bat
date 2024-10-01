@@ -3,7 +3,6 @@ setlocal
 
 rem Define variables
 set APP_NAME=godark.exe
-set ICON_FILE=icon.ico
 
 rem Clean previous builds
 echo Cleaning up...
