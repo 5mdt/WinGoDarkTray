@@ -20,6 +20,35 @@ const (
 	appName            = "WinGoDarkTray"
 )
 
+// Centralized message and title storage
+var messages = struct {
+	ToggleTooltip   string
+	AutorunEnabled  string
+	AutorunDisabled string
+	Error           string
+	ModeSwitched    string
+}{
+	ToggleTooltip:   "Toggle between light and dark app mode",
+	AutorunEnabled:  "Autorun enabled!",
+	AutorunDisabled: "Autorun disabled!",
+	Error:           "Error: ",
+	ModeSwitched:    "Mode switched successfully!",
+}
+
+var menuTitles = struct {
+	ToggleMode             string
+	EnableAutorun          string
+	Quit                   string
+	EnableAutorunChecked   string
+	EnableAutorunUnchecked string
+}{
+	ToggleMode:             "Toggle app mode",
+	EnableAutorun:          "Enable Autorun",
+	Quit:                   "Quit",
+	EnableAutorunChecked:   "Enable Autorun (✔)",
+	EnableAutorunUnchecked: "Enable Autorun (❌)",
+}
+
 func main() {
 	// Initialize the system tray application
 	systray.Run(onReady, onExit)
@@ -28,12 +57,12 @@ func main() {
 func onReady() {
 	// Set the tray icon and tooltip
 	systray.SetIcon(icon)
-	systray.SetTooltip("Toggle between light and dark app mode")
+	systray.SetTooltip(messages.ToggleTooltip)
 
 	// Add menu items for toggling mode, enabling autorun, and quitting the app
-	toggleItem := systray.AddMenuItem("Toggle app mode", "Toggle between light and dark app mode")
-	autorunItem := systray.AddMenuItem("Enable Autorun", "Enable/Disable autorun at startup")
-	quitItem := systray.AddMenuItem("Quit", "Quit the app")
+	toggleItem := systray.AddMenuItem(menuTitles.ToggleMode, "Toggle between light and dark app mode")
+	autorunItem := systray.AddMenuItem(menuTitles.EnableAutorun, "Enable/Disable autorun at startup")
+	quitItem := systray.AddMenuItem(menuTitles.Quit, "Quit the app")
 
 	// Update the autorun status based on current registry settings
 	updateAutorunStatus(autorunItem)
@@ -99,9 +128,9 @@ func toggleMode() {
 	}
 
 	// Provide feedback on the mode change
-	systray.SetTooltip("Mode switched successfully!")
+	systray.SetTooltip(messages.ModeSwitched)
 	time.Sleep(2 * time.Second)
-	systray.SetTooltip("Toggle between light and dark app mode") // Reset tooltip
+	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
 }
 
 func updateRegistryMode(key registry.Key, newMode uint32) error {
@@ -119,9 +148,9 @@ func updateRegistryMode(key registry.Key, newMode uint32) error {
 
 func showError(message string) {
 	// Display an error message in the system tray tooltip
-	systray.SetTooltip("Error: " + message)
+	systray.SetTooltip(messages.Error + message)
 	time.Sleep(3 * time.Second)
-	systray.SetTooltip("Toggle between light and dark app mode") // Reset tooltip
+	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
 }
 
 func toggleAutorun(autorunItem *systray.MenuItem) {
@@ -148,7 +177,7 @@ func toggleAutorun(autorunItem *systray.MenuItem) {
 	}
 
 	time.Sleep(2 * time.Second)
-	systray.SetTooltip("Toggle between light and dark app mode") // Reset tooltip
+	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
 }
 
 func removeAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
@@ -158,8 +187,8 @@ func removeAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
 		return err
 	}
 	// Update the menu item label to indicate autorun is disabled
-	autorunItem.SetTitle("Enable Autorun (❌)")
-	systray.SetTooltip("Autorun disabled!")
+	autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
+	systray.SetTooltip(messages.AutorunDisabled)
 	return nil
 }
 
@@ -176,8 +205,8 @@ func addAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
 		return err
 	}
 	// Update the menu item label to indicate autorun is enabled
-	autorunItem.SetTitle("Enable Autorun (✔)")
-	systray.SetTooltip("Autorun enabled!")
+	autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
+	systray.SetTooltip(messages.AutorunEnabled)
 	return nil
 }
 
@@ -199,9 +228,9 @@ func updateAutorunStatus(autorunItem *systray.MenuItem) {
 	_, _, err = key.GetStringValue(appName)
 	if err == nil {
 		// App is set to autorun, update the menu item to reflect that
-		autorunItem.SetTitle("Enable Autorun (✔)")
+		autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
 	} else {
 		// App is not set to autorun, update the menu item to reflect that
-		autorunItem.SetTitle("Enable Autorun (❌)")
+		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
 	}
 }
