@@ -1,0 +1,13 @@
+# dependabot.yml
+
+# .github/dependabot.yml
+
+version: 2
+updates:
+  - package-ecosystem: "go"
+    directory: "/"  # Location of go.mod file
+    schedule:
+      interval: "weekly"  # Options: "daily", "weekly", "monthly"
+    commit-message:
+      prefix: "deps"  # Default commit message prefix ("deps")
+    versioning-strategy: "increase"  # Options: "increase", "lockfile-only", "auto"

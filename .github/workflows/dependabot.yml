@@ -1,11 +1,18 @@
-# .github/dependabot.yml
+# dependabot.yml
 
-version: 2
-updates:
-  - package-ecosystem: "go"
-    directory: "/"  # Location of go.mod file
-    schedule:
-      interval: "weekly"  # Options: "daily", "weekly", "monthly"
-    commit-message:
-      prefix: "deps"  # Default commit message prefix ("deps")
-    versioning-strategy: "increase"  # Options: "increase", "lockfile-only", "auto"
+---
+name: Dependency Update
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"  # Run every Sunday at midnight
+  workflow_dispatch:  # Manually triggered
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Dependabot Update
+        uses: dependabot/dependabot-core@v2
