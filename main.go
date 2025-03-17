@@ -40,9 +40,9 @@ func onReady() {
 func onExit() {}
 
 func toggleMode() {
+	// Open the registry key for Personalize
 	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
-		// Show error message in the system tray
 		showError("Failed to open registry key: " + err.Error())
 		return
 	}
@@ -51,29 +51,47 @@ func toggleMode() {
 	// Get the current app mode
 	currentMode, _, err := key.GetIntegerValue("AppsUseLightTheme")
 	if err != nil {
-		// Show error message in the system tray
 		showError("Failed to read AppsUseLightTheme: " + err.Error())
+		return
+	}
+
+	// Get the current system mode
+	systemMode, _, err := key.GetIntegerValue("SystemUsesLightTheme")
+	if err != nil {
+		showError("Failed to read SystemUsesLightTheme: " + err.Error())
 		return
 	}
 
 	// Toggle the mode (0 = dark, 1 = light)
 	var newMode uint32
-	if currentMode == 0 {
+	if currentMode == 0 && systemMode == 0 {
+		// Switch to light mode
 		newMode = 1
-		fmt.Println("Switching to light app mode...")
+		fmt.Println("Switching to light app mode and light system mode...")
 	} else {
+		// Switch to dark mode
 		newMode = 0
-		fmt.Println("Switching to dark app mode...")
+		fmt.Println("Switching to dark app mode and dark system mode...")
 	}
 
 	// Set the new app mode in the registry
 	err = key.SetDWordValue("AppsUseLightTheme", newMode)
 	if err != nil {
-		// Show error message in the system tray
 		showError("Failed to set AppsUseLightTheme: " + err.Error())
 		return
 	}
-	fmt.Println("Mode switched successfully")
+
+	// Set the new system mode in the registry
+	err = key.SetDWordValue("SystemUsesLightTheme", newMode)
+	if err != nil {
+		showError("Failed to set SystemUsesLightTheme: " + err.Error())
+		return
+	}
+
+	// Provide feedback that the mode has been changed successfully
+	systray.SetTooltip("Mode switched successfully!")
+	time.Sleep(2 * time.Second)                                  // Show success tooltip for 2 seconds
+	systray.SetTooltip("Toggle between light and dark app mode") // Reset tooltip
 }
 
 func showError(message string) {
