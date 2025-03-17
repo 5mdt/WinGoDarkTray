@@ -55,3 +55,9 @@ jobs:
       with:
         artifacts: './build/WinGoDarkTray-x64.exe,./build/WinGoDarkTray-x32.exe'
         token: ${{ secrets.GITHUB_TOKEN }}
+        generateReleaseNotes: false
+        makeLatest: true
+        skipIfReleaseExists: false
+        removeArtifacts: false
+        replacesArtifacts: true
+        updateOnlyUnreleased: true
