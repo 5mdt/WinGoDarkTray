@@ -2,7 +2,7 @@
 setlocal
 
 rem Define variables
-set APP_NAME=godark.exe
+set APP_NAME=WinGoDarkTray.exe
 
 rem Clean previous builds
 echo Cleaning up...
