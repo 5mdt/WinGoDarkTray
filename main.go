@@ -3,8 +3,10 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/getlantern/systray"
@@ -18,6 +20,7 @@ var icon []byte
 const (
 	autorunRegistryKey = `Software\Microsoft\Windows\CurrentVersion\Run`
 	appName            = "WinGoDarkTray"
+	projectLink        = "https://github.com/5mdt/WinGoDarkTray"
 )
 
 // Centralized message and title storage
@@ -28,7 +31,7 @@ var messages = struct {
 	Error           string
 	ModeSwitched    string
 }{
-	ToggleTooltip:   "Toggle between light and dark app mode",
+	ToggleTooltip:   "Toggle between themes for system-wide, app, and Windows",
 	AutorunEnabled:  "Autorun enabled!",
 	AutorunDisabled: "Autorun disabled!",
 	Error:           "Error: ",
@@ -36,13 +39,19 @@ var messages = struct {
 }
 
 var menuTitles = struct {
-	ToggleMode             string
+	AppName                string
+	ToggleSystemMode       string
+	ToggleAppMode          string
+	ToggleWindowsMode      string
 	EnableAutorun          string
 	Quit                   string
 	EnableAutorunChecked   string
 	EnableAutorunUnchecked string
 }{
-	ToggleMode:             "Toggle app mode",
+	AppName:                "WinGoDarkTray 🔗",
+	ToggleSystemMode:       "Toggle System-Wide theme",
+	ToggleAppMode:          "Toggle Apps theme",
+	ToggleWindowsMode:      "Toggle Windows theme",
 	EnableAutorun:          "Enable Autorun",
 	Quit:                   "Quit",
 	EnableAutorunChecked:   "Enable Autorun (✔)",
@@ -59,28 +68,47 @@ func onReady() {
 	systray.SetIcon(icon)
 	systray.SetTooltip(messages.ToggleTooltip)
 
-	// Add menu items for toggling mode, enabling autorun, and quitting the app
-	toggleItem := systray.AddMenuItem(menuTitles.ToggleMode, "Toggle between light and dark app mode")
+	// Add inactive AppName that opens ProjectLink in the browser
+	appNameItem := systray.AddMenuItem(menuTitles.AppName, "") // Just displaying as an info item, no action
+
+	// Open the ProjectLink URL when clicked
+	go func() {
+		<-appNameItem.ClickedCh
+		openBrowser(projectLink)
+	}()
+
 	autorunItem := systray.AddMenuItem(menuTitles.EnableAutorun, "Enable/Disable autorun at startup")
+	systray.AddSeparator()
+
+	// Add menu items for toggling system, app, and windows themes, enabling autorun, and quitting the app
+	toggleSystemItem := systray.AddMenuItem(menuTitles.ToggleSystemMode, "Toggle system-wide theme (light/dark)")
+	systray.AddSeparator()
+	toggleAppItem := systray.AddMenuItem(menuTitles.ToggleAppMode, "Toggle app theme (light/dark)")
+	toggleWindowsItem := systray.AddMenuItem(menuTitles.ToggleWindowsMode, "Toggle Windows theme (light/dark)")
+	systray.AddSeparator()
 	quitItem := systray.AddMenuItem(menuTitles.Quit, "Quit the app")
 
 	// Update the autorun status based on current registry settings
 	updateAutorunStatus(autorunItem)
 
 	// Event loop to handle user interactions with the tray menu
-	go handleMenuItemClicks(toggleItem, autorunItem, quitItem)
+	go handleMenuItemClicks(toggleSystemItem, toggleAppItem, toggleWindowsItem, autorunItem, quitItem)
 }
 
 func onExit() {
 	// Perform any necessary cleanup when the app exits
 }
 
-func handleMenuItemClicks(toggleItem, autorunItem, quitItem *systray.MenuItem) {
+func handleMenuItemClicks(toggleSystemItem, toggleAppItem, toggleWindowsItem, autorunItem, quitItem *systray.MenuItem) {
 	// Listen for menu item click events and trigger corresponding actions
 	for {
 		select {
-		case <-toggleItem.ClickedCh:
-			toggleMode()
+		case <-toggleSystemItem.ClickedCh:
+			toggleSystemMode()
+		case <-toggleAppItem.ClickedCh:
+			toggleAppMode()
+		case <-toggleWindowsItem.ClickedCh:
+			toggleWindowsMode()
 		case <-autorunItem.ClickedCh:
 			toggleAutorun(autorunItem)
 		case <-quitItem.ClickedCh:
@@ -89,41 +117,55 @@ func handleMenuItemClicks(toggleItem, autorunItem, quitItem *systray.MenuItem) {
 	}
 }
 
-func toggleMode() {
-	// Open the registry key for Personalize settings
-	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
+func openBrowser(urlStr string) {
+	var err error
+	// Open the URL in the default browser without cmd window
+	switch runtime.GOOS {
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", urlStr).Start()
+	case "darwin":
+		err = exec.Command("open", urlStr).Start()
+	case "linux":
+		err = exec.Command("xdg-open", urlStr).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
 	if err != nil {
-		showError("Failed to open registry key: " + err.Error())
+		showError("Failed to open browser: " + err.Error())
+	}
+}
+
+func toggleSystemMode() {
+	// Open the registry key for system-wide theme settings
+	key, err := openRegistryKey(`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		showError("Failed to open registry key for system theme: " + err.Error())
 		return
 	}
 	defer key.Close()
 
-	// Read the current app mode and system mode from the registry
-	currentMode, _, err := key.GetIntegerValue("AppsUseLightTheme")
-	if err != nil {
-		showError("Failed to read AppsUseLightTheme: " + err.Error())
-		return
-	}
-	systemMode, _, err := key.GetIntegerValue("SystemUsesLightTheme")
+	// Read the current system theme mode from the registry
+	currentSystemMode, _, err := key.GetIntegerValue("SystemUsesLightTheme")
 	if err != nil {
 		showError("Failed to read SystemUsesLightTheme: " + err.Error())
 		return
 	}
 
-	// Toggle the app mode based on the current settings
+	// Toggle the system-wide theme mode
 	var newMode uint32
-	if currentMode == 0 && systemMode == 0 {
+	if currentSystemMode == 0 {
 		// Switch to light mode
 		newMode = 1
-		fmt.Println("Switching to light app mode and light system mode...")
+		fmt.Println("Switching system-wide theme to light mode...")
 	} else {
 		// Switch to dark mode
 		newMode = 0
-		fmt.Println("Switching to dark app mode and dark system mode...")
+		fmt.Println("Switching system-wide theme to dark mode...")
 	}
 
-	// Update the app mode and system mode in the registry
-	if err := updateRegistryMode(key, newMode); err != nil {
+	// Update the system theme mode in the registry
+	if err := key.SetDWordValue("SystemUsesLightTheme", newMode); err != nil {
+		showError("Failed to set SystemUsesLightTheme: " + err.Error())
 		return
 	}
 
@@ -133,44 +175,67 @@ func toggleMode() {
 	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
 }
 
-func updateRegistryMode(key registry.Key, newMode uint32) error {
-	// Update both app mode and system mode in the registry
+func toggleAppMode() {
+	// Open the registry key for app-specific theme settings
+	key, err := openRegistryKey(`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		showError("Failed to open registry key for app theme: " + err.Error())
+		return
+	}
+	defer key.Close()
+
+	// Read the current app theme mode from the registry
+	currentAppMode, _, err := key.GetIntegerValue("AppsUseLightTheme")
+	if err != nil {
+		showError("Failed to read AppsUseLightTheme: " + err.Error())
+		return
+	}
+
+	// Toggle the app-specific theme mode
+	var newMode uint32
+	if currentAppMode == 0 {
+		// Switch to light mode
+		newMode = 1
+		fmt.Println("Switching app theme to light mode...")
+	} else {
+		// Switch to dark mode
+		newMode = 0
+		fmt.Println("Switching app theme to dark mode...")
+	}
+
+	// Update the app theme mode in the registry
 	if err := key.SetDWordValue("AppsUseLightTheme", newMode); err != nil {
 		showError("Failed to set AppsUseLightTheme: " + err.Error())
-		return err
+		return
 	}
-	if err := key.SetDWordValue("SystemUsesLightTheme", newMode); err != nil {
-		showError("Failed to set SystemUsesLightTheme: " + err.Error())
-		return err
-	}
-	return nil
+
+	// Provide feedback on the mode change
+	systray.SetTooltip(messages.ModeSwitched)
+	time.Sleep(2 * time.Second)
+	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
 }
 
-func showError(message string) {
-	// Display an error message in the system tray tooltip
-	systray.SetTooltip(messages.Error + message)
-	time.Sleep(3 * time.Second)
-	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
+func toggleWindowsMode() {
+	// This can be implemented as the same logic as system mode toggle
+	// But assuming that there's a separate registry or method to handle this, you could extend this.
+	// For now, it's the same as system mode toggle
+	toggleSystemMode() // Reusing system mode toggle for simplicity
 }
 
 func toggleAutorun(autorunItem *systray.MenuItem) {
 	// Open the registry key for Run settings
-	key, err := registry.OpenKey(registry.CURRENT_USER, autorunRegistryKey, registry.QUERY_VALUE|registry.SET_VALUE)
+	key, err := openRegistryKey(autorunRegistryKey, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
 		showError("Failed to open autorun registry key: " + err.Error())
 		return
 	}
 	defer key.Close()
 
-	// Check if the app is set to run at startup
-	_, _, err = key.GetStringValue(appName)
-	if err == nil {
-		// If the app is set to autorun, remove it
+	if isAutorunEnabled(key) {
 		if err := removeAutorun(key, autorunItem); err != nil {
 			return
 		}
 	} else {
-		// If the app is not set to autorun, add it
 		if err := addAutorun(key, autorunItem); err != nil {
 			return
 		}
@@ -212,12 +277,12 @@ func addAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
 
 func getExePath() (string, error) {
 	// Return the path of the currently running executable
-	return exec.LookPath(os.Args[0])
+	return os.Executable()
 }
 
 func updateAutorunStatus(autorunItem *systray.MenuItem) {
 	// Open the registry key for Run settings
-	key, err := registry.OpenKey(registry.CURRENT_USER, autorunRegistryKey, registry.QUERY_VALUE)
+	key, err := openRegistryKey(autorunRegistryKey, registry.QUERY_VALUE)
 	if err != nil {
 		showError("Failed to open autorun registry key: " + err.Error())
 		return
@@ -225,12 +290,42 @@ func updateAutorunStatus(autorunItem *systray.MenuItem) {
 	defer key.Close()
 
 	// Check if the app is already set to autorun and update the menu item label
-	_, _, err = key.GetStringValue(appName)
-	if err == nil {
+	if isAutorunEnabled(key) {
 		// App is set to autorun, update the menu item to reflect that
 		autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
 	} else {
 		// App is not set to autorun, update the menu item to reflect that
 		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
 	}
+}
+
+func isAutorunEnabled(key registry.Key) bool {
+	_, _, err := key.GetStringValue(appName)
+	return err == nil
+}
+
+func showError(message string) {
+	logError(message) // Log to file for persistence
+	systray.SetTooltip(messages.Error + message)
+	time.Sleep(3 * time.Second)
+	systray.SetTooltip(messages.ToggleTooltip) // Reset tooltip
+}
+
+func logError(message string) {
+	file, err := os.OpenFile("error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Failed to open error log:", err)
+		return
+	}
+	defer file.Close()
+	logger := log.New(file, "", log.LstdFlags)
+	logger.Println(message)
+}
+
+func openRegistryKey(path string, access uint32) (registry.Key, error) {
+	key, err := registry.OpenKey(registry.CURRENT_USER, path, access)
+	if err != nil {
+		return registry.Key(0), fmt.Errorf("failed to open registry key: %v", err) // Return an empty Key (0) instead of nil
+	}
+	return key, nil
 }
