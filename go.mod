@@ -1,4 +1,4 @@
-module github.com/anboris/godark
+module github.com/5mdt/godark
 
 go 1.23.1
 

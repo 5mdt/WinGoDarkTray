@@ -27,7 +27,7 @@ jobs:
       with:
         path: |
           ~/.cache/go-build
-          $GOPATH/pkg/mod  # Cache Go modules and GOPATH
+          $GOPATH/pkg/mod
         key: ${{ runner.os }}-go-cache-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-cache-
@@ -40,16 +40,12 @@ jobs:
 
     - name: Build Windows Executables for x64 and x32
       run: |
-        # Clean any old builds
         rm -rf ./build
         mkdir -p ./build
-        rsrc -ico icon.ico  # Embed the icon into the EXE
+        rsrc -ico icon.ico || exit 1  # Fail if icon embedding fails
 
-        # Build x64 (amd64) version
-        GOARCH=amd64 GOOS=windows go build -ldflags=-H=windowsgui -o ./build/WinGoDarkTray-x64.exe
-
-        # Build x32 (386) version
-        GOARCH=386 GOOS=windows go build -ldflags=-H=windowsgui -o ./build/WinGoDarkTray-x32.exe
+        CGO_ENABLED=0 GOARCH=amd64 GOOS=windows go build -ldflags="-H=windowsgui" -o ./build/WinGoDarkTray-x64.exe
+        CGO_ENABLED=0 GOARCH=386 GOOS=windows go build -ldflags="-H=windowsgui" -o ./build/WinGoDarkTray-x32.exe
 
     - name: Upload Windows Executables to Release
       if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
