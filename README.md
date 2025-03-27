@@ -19,13 +19,54 @@
 
 ## Installation
 
-### Download the App
+### Install via Winget
 
-The easiest way to get started is by downloading the pre-built binary from the [Releases](https://github.com/5mdt/WinGoDarkTray/releases) page.
+The easiest way to get started is by installing **WinGoDarkTray** via the [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/)
+
+1. Open PowerShell.
+2. (Optional) Run the following command to search for the latest version of WinGoDarkTray:
+
+   ```powershell
+   winget search WinGoDarkTray
+   ```
+
+3. Once you find the app, install it with the following command:
+
+   ```powershell
+   winget install 5mdt.WinGoDarkTray
+   ```
+
+4. After installation, open a new terminal or press `[Win] + [R]`, then type `WinGoDarkTray` and press Enter to start the app. **WinGoDarkTray** will appear in your system tray, ready for use.
+5. (Optional) Press tray icon and enable autorun.
+
+### Install from GitHub (Alternative Method)
+
+If you prefer to install **WinGoDarkTray** directly from GitHub:
 
 1. Visit the [Releases page](https://github.com/5mdt/WinGoDarkTray/releases).
 2. Download the `.exe` file suitable for your architecture (x86 or x64).
 3. Run the executable — it’ll pop up in your system tray, ready for use.
+4. (Optional) Press tray icon and enable autorun.
+
+### Building from Source
+
+If you want to build **WinGoDarkTray** from source, follow these steps:
+
+1. Make sure Go 1.24+ is installed. You can download Go from [here](https://golang.org/dl/).
+2. Clone this repository:
+
+   ```bash
+   git clone https://github.com/5mdt/WinGoDarkTray.git
+   cd WinGoDarkTray
+   ```
+
+3. Build the application:
+
+   ```bash
+   go build -o WinGoDarkTray.exe
+   ```
+
+4. Double-click `WinGoDarkTray.exe` to launch it, and it will appear in your system tray.
 
 ### Building from Source
 
@@ -46,6 +87,7 @@ To build WinGoDarkTray from source, follow these steps:
    ```
 
 4. Double-click `WinGoDarkTray.exe` to launch it, and it will appear in your system tray.
+5. (Optional) Press tray icon and enable autorun.
 
 ## Contributing
 
