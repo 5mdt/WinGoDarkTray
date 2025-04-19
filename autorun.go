@@ -5,20 +5,28 @@ import (
 
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 func toggleAutorun(autorunItem *systray.MenuItem) {
 	key, err := openRegistryKey(autorunRegistryKey, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
 		showError("Failed to open autorun registry key: " + err.Error())
+		logEvent(eventlog.Error, "Failed to open autorun registry key: "+err.Error())
 		return
 	}
 	defer key.Close()
 
 	if isAutorunEnabled(key) {
 		updateAutorun(key, autorunItem, false)
+		logEvent(eventlog.Info, "Autorun disabled")
+		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
+		systray.SetTooltip("Autorun disabled")
 	} else {
 		updateAutorun(key, autorunItem, true)
+		logEvent(eventlog.Info, "Autorun enabled")
+		autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
+		systray.SetTooltip("Autorun enabled")
 	}
 
 	time.Sleep(2 * time.Second)

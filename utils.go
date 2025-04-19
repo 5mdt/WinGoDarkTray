@@ -1,14 +1,11 @@
 package main
 
 import (
-	"github.com/gen2brain/beeep"
-	"github.com/getlantern/systray"
-	"golang.org/x/sys/windows/registry"
-	"golang.org/x/sys/windows/svc/eventlog"
 	"os"
 	"os/exec"
 	"runtime"
-	"time"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 func openBrowser(urlStr string) {
@@ -21,37 +18,6 @@ func openBrowser(urlStr string) {
 	if err != nil {
 		showError("Failed to open browser: " + err.Error())
 	}
-}
-
-func showError(message string) {
-	logEvent(eventlog.Error, message)
-	err := beeep.Notify("WinGoDarkTray Error", message, "")
-	if err != nil {
-		systray.SetTooltip(tooltips.Error + message)
-		time.Sleep(3 * time.Second)
-		systray.SetTooltip(tooltips.Default)
-	}
-}
-
-func logEvent(eventType uint32, message string) {
-	elog, err := eventlog.Open(appName)
-	if err != nil {
-		return
-	}
-	defer elog.Close()
-
-	switch eventType {
-	case eventlog.Info:
-		elog.Info(1, message)
-	case eventlog.Warning:
-		elog.Warning(2, message)
-	case eventlog.Error:
-		elog.Error(3, message)
-	}
-}
-
-func installEventLogSource() error {
-	return eventlog.InstallAsEventCreate(appName, eventlog.Error|eventlog.Warning|eventlog.Info)
 }
 
 func openRegistryKey(path string, access uint32) (registry.Key, error) {
