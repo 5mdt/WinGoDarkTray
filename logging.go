@@ -74,7 +74,7 @@ func showError(message string) {
 
 	logEvent(eventlog.Error, message)
 
-	err := beeep.Notify("WinGoDarkTray Error", message, "")
+	err := beeep.Notify(notificationTexts.Error, message, "")
 	if err != nil {
 
 		systray.SetTooltip(tooltips.Error + message)

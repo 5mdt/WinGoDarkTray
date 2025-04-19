@@ -21,7 +21,7 @@
 | **F-005** | Tray UI | Displays a system tray icon and menu. | As a user, I want easy access without launching a full app window. | Menu includes: `Toggle System`, `App`, `Windows`, `Autorun`, `GitHub`, `Quit`. |
 | **F-006** | Open GitHub | Opens the project’s GitHub repo from the tray. | As a curious user or dev, I want to see the source or contribute. | Clicking “WinGoDarkTray 🔗” opens the GitHub link in the default browser. |
 | **F-007** | Error Handling & Windows Event Logging | Uses Windows Event Log to record operational or error messages. | As a user, I want to know when something fails. As a developer, I want standard logs for troubleshooting. | Errors and important events are logged using the built-in Windows Event Log system under a custom source (`WinGoDarkTray`). Tooltip shows a temporary friendly error message. Errors and important events are logged using the built-in Windows Event Log system under a custom source (WinGoDarkTray). The log source is silently installed on first run.|
-
+| **F-008** | Version Update Checker | On app start, checks for newer version from GitHub. Notifies user via Windows notification. | As a user, I want to know if there's a newer version available. | Calls GitHub API, compares current version. If newer version found, uses beeep.Notify() to alert. Menu item allows manual check. |
 -
 
 ## 🔧 Technical Constraints

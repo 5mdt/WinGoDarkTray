@@ -1,4 +1,4 @@
-module github.com/anboris/godark
+module github.com/5mdt/wingodarktray
 
 go 1.23.1
 
