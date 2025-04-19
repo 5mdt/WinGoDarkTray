@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
+	"golang.org/x/sys/windows/svc/eventlog"
 	"time"
 )
 
@@ -24,10 +24,10 @@ func toggleSystemMode() {
 	var newMode uint32
 	if appMode == 1 {
 		newMode = 0
-		fmt.Println("Switching to dark mode (App + Windows)...")
+		logEvent(eventlog.Info, "Switching to dark mode (App + Windows)...")
 	} else {
 		newMode = 1
-		fmt.Println("Switching to light mode (App + Windows)...")
+		logEvent(eventlog.Info, "Switching to light mode (App + Windows)...")
 	}
 
 	key.SetDWordValue("AppsUseLightTheme", newMode)
@@ -55,9 +55,9 @@ func toggleAppMode() {
 	newMode := uint32(1)
 	if current == 1 {
 		newMode = 0
-		fmt.Println("Switching to dark mode...")
+		logEvent(eventlog.Info, "Switching to dark mode...")
 	} else {
-		fmt.Println("Switching to light mode...")
+		logEvent(eventlog.Info, "Switching to light mode...")
 	}
 
 	key.SetDWordValue("AppsUseLightTheme", newMode)
