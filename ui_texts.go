@@ -32,8 +32,8 @@ var trayTitles = struct {
 
 var tooltips = struct {
 	Default string
-	Error   string // Add this line for the error tooltip
+	Error   string
 }{
 	Default: "A windows app to toggle light and dark mode from the system tray",
-	Error:   "An error occurred, please try again later.", // Add this error message
+	Error:   "An error occurred, please try again later.",
 }

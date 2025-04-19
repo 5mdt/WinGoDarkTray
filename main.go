@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/getlantern/systray"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 func main() {
@@ -14,6 +15,13 @@ func onExit() {}
 func onReady() {
 	systray.SetIcon(icon)
 	systray.SetTooltip(tooltips.Default)
+	logEvent(eventlog.Info, "WinGoDarkTray started and running")
+	err := installEventLogSource()
+	if err != nil {
+		showError("Failed to install event log source: " + err.Error())
+		logEvent(eventlog.Error, "Failed to install event log source: "+err.Error())
+		return
+	}
 
 	appNameItem := systray.AddMenuItem(menuTitles.AppName, "")
 	go func() {
