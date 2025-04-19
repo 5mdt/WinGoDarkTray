@@ -39,12 +39,12 @@ var menuTitles = struct {
 	EnableAutorunChecked   string
 	EnableAutorunUnchecked string
 }{
-	AppName:                "WinGoDarkTray 🔗",
+	AppName:                "🔗 WinGoDarkTray",
 	ToggleSystemMode:       "Toggle System-Wide theme",
 	ToggleAppMode:          "Toggle Apps theme",
 	ToggleWindowsMode:      "Toggle Windows theme",
 	EnableAutorun:          "Enable Autorun",
-	Quit:                   "Quit",
-	EnableAutorunChecked:   "Enable Autorun (✔)",
-	EnableAutorunUnchecked: "Enable Autorun (❌)",
+	Quit:                   "✕ Quit",
+	EnableAutorunChecked:   "✔ Enable Autorun",
+	EnableAutorunUnchecked: "✗ Enable Autorun",
 }
