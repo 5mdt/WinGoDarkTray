@@ -6,4 +6,5 @@ var (
 	toggleSystemItem  *systray.MenuItem
 	toggleAppItem     *systray.MenuItem
 	toggleWindowsItem *systray.MenuItem
+	updateNowItem     *systray.MenuItem
 )

@@ -91,17 +91,17 @@ func updateThemeToggleTitles(bothItem, appItem, windowsItem *systray.MenuItem) {
 	systemMode, _, _ := key.GetIntegerValue("SystemUsesLightTheme")
 
 	if appMode == 1 {
-		appItem.SetTitle(trayTitles.ToggleAppToDark)
-		bothItem.SetTitle(trayTitles.ToggleBothToDark)
+		appItem.SetTitle(menuTitles.ToggleAppToDark)
+		bothItem.SetTitle(menuTitles.ToggleBothToDark)
 	} else {
-		appItem.SetTitle(trayTitles.ToggleAppToLight)
-		bothItem.SetTitle(trayTitles.ToggleBothToLight)
+		appItem.SetTitle(menuTitles.ToggleAppToLight)
+		bothItem.SetTitle(menuTitles.ToggleBothToLight)
 	}
 
 	if systemMode == 1 {
-		windowsItem.SetTitle(trayTitles.ToggleWinToDark)
+		windowsItem.SetTitle(menuTitles.ToggleWinToDark)
 	} else {
-		windowsItem.SetTitle(trayTitles.ToggleWinToLight)
+		windowsItem.SetTitle(menuTitles.ToggleWinToLight)
 	}
 }
 
