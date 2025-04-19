@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -24,21 +23,26 @@ func openBrowser(urlStr string) {
 }
 
 func showError(message string) {
-	logError(message)
+	logEvent(eventlog.Error, message)
 	systray.SetTooltip(messages.Error + message)
 	time.Sleep(3 * time.Second)
 	systray.SetTooltip(messages.ToggleTooltip)
 }
-
-func logError(message string) {
+func logEvent(eventType uint32, message string) {
 	elog, err := eventlog.Open(appName)
 	if err != nil {
-		fmt.Println("EventLog open error:", err)
 		return
 	}
 	defer elog.Close()
 
-	elog.Error(1, message)
+	switch eventType {
+	case eventlog.Info:
+		elog.Info(1, message)
+	case eventlog.Warning:
+		elog.Warning(2, message)
+	case eventlog.Error:
+		elog.Error(3, message)
+	}
 }
 
 func installEventLogSource() error {
@@ -48,7 +52,7 @@ func installEventLogSource() error {
 func openRegistryKey(path string, access uint32) (registry.Key, error) {
 	key, err := registry.OpenKey(registry.CURRENT_USER, path, access)
 	if err != nil {
-		return registry.Key(0), fmt.Errorf("failed to open registry key: %v", err)
+		return registry.Key(0), err
 	}
 	return key, nil
 }
