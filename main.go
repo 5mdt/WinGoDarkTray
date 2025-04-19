@@ -5,6 +5,7 @@ import (
 )
 
 func main() {
+	_ = installEventLogSource()
 	systray.Run(onReady, onExit)
 }
 
@@ -12,7 +13,7 @@ func onExit() {}
 
 func onReady() {
 	systray.SetIcon(icon)
-	systray.SetTooltip(messages.ToggleTooltip)
+	systray.SetTooltip(tooltips.Default)
 
 	appNameItem := systray.AddMenuItem(menuTitles.AppName, "")
 	go func() {
@@ -20,18 +21,20 @@ func onReady() {
 		openBrowser(projectLink)
 	}()
 
-	autorunItem := systray.AddMenuItem(menuTitles.EnableAutorun, "Enable/Disable autorun at startup")
+	autorunItem := systray.AddMenuItem(menuTitles.EnableAutorun, "")
 	systray.AddSeparator()
 
-	toggleSystemItem = systray.AddMenuItem("", "Toggle system-wide theme (light/dark)")
+	toggleSystemItem = systray.AddMenuItem("", "")
 	systray.AddSeparator()
-	toggleAppItem = systray.AddMenuItem("", "Toggle app theme (light/dark)")
-	toggleWindowsItem = systray.AddMenuItem(menuTitles.ToggleWindowsMode, "Toggle Windows theme (light/dark)")
+
+	toggleAppItem = systray.AddMenuItem("", "")
+	toggleWindowsItem = systray.AddMenuItem("", "")
 	systray.AddSeparator()
-	quitItem := systray.AddMenuItem(menuTitles.Quit, "Quit the app")
+
+	quitItem := systray.AddMenuItem(menuTitles.Quit, "Exit the application")
 
 	updateAutorunStatus(autorunItem)
-	updateThemeToggleTitles(toggleSystemItem, toggleAppItem)
+	updateThemeToggleTitles(toggleSystemItem, toggleAppItem, toggleWindowsItem)
 
 	go handleMenuItemClicks(toggleSystemItem, toggleAppItem, toggleWindowsItem, autorunItem, quitItem)
 }

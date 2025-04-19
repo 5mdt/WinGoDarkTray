@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -24,10 +25,14 @@ func openBrowser(urlStr string) {
 
 func showError(message string) {
 	logEvent(eventlog.Error, message)
-	systray.SetTooltip(messages.Error + message)
-	time.Sleep(3 * time.Second)
-	systray.SetTooltip(messages.ToggleTooltip)
+	err := beeep.Notify("WinGoDarkTray Error", message, "")
+	if err != nil {
+		systray.SetTooltip(tooltips.Error + message)
+		time.Sleep(3 * time.Second)
+		systray.SetTooltip(tooltips.Default)
+	}
 }
+
 func logEvent(eventType uint32, message string) {
 	elog, err := eventlog.Open(appName)
 	if err != nil {

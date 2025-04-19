@@ -16,37 +16,46 @@ func toggleAutorun(autorunItem *systray.MenuItem) {
 	defer key.Close()
 
 	if isAutorunEnabled(key) {
-		removeAutorun(key, autorunItem)
+		updateAutorun(key, autorunItem, false)
 	} else {
-		addAutorun(key, autorunItem)
+		updateAutorun(key, autorunItem, true)
 	}
 
 	time.Sleep(2 * time.Second)
-	systray.SetTooltip(messages.ToggleTooltip)
+	systray.SetTooltip(tooltips.Default)
+}
+
+func updateAutorun(key registry.Key, autorunItem *systray.MenuItem, enable bool) {
+	var err error
+	if enable {
+		err = addAutorun(key, autorunItem)
+	} else {
+		err = removeAutorun(key, autorunItem)
+	}
+	if err != nil {
+		showError("Failed to update autorun: " + err.Error())
+	}
 }
 
 func removeAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
 	if err := key.DeleteValue(appName); err != nil {
-		showError("Failed to remove autorun: " + err.Error())
 		return err
 	}
 	autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
-	systray.SetTooltip(messages.AutorunDisabled)
+	systray.SetTooltip(tooltips.Default)
 	return nil
 }
 
 func addAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
 	exePath, err := getExePath()
 	if err != nil {
-		showError("Failed to find executable path: " + err.Error())
 		return err
 	}
 	if err := key.SetStringValue(appName, exePath); err != nil {
-		showError("Failed to set autorun: " + err.Error())
 		return err
 	}
 	autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
-	systray.SetTooltip(messages.AutorunEnabled)
+	systray.SetTooltip(tooltips.Default)
 	return nil
 }
 
