@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	github.com/getlantern/systray v1.2.2
+	github.com/go-ole/go-ole v1.3.0
 	golang.org/x/sys v0.31.0
 )
 
