@@ -64,3 +64,10 @@ jobs:
         removeArtifacts: false
         replacesArtifacts: true
         updateOnlyUnreleased: true
+    - name: VirusTotal Scan
+      uses: crazy-max/ghaction-virustotal@v4
+      with:
+        vt_api_key: ${{ secrets.VT_API_KEY }}
+        files: |
+          ./build/WinGoDarkTray-x32.exe
+          ./build/WinGoDarkTray-x64.exe
