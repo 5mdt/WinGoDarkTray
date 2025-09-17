@@ -29,7 +29,6 @@ var version string
 
 func main() {
 	app := NewApp(version)
-	_ = installEventLogSource()
 	systray.Run(app.onReady, onExit)
 }
 
