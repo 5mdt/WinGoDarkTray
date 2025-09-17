@@ -27,15 +27,6 @@ func updateAutorunUI(autorunItem *systray.MenuItem, enabled bool) {
 	}
 }
 
-// showTemporaryTooltip displays a message temporarily then restores default tooltip
-func showTemporaryTooltip(message string) {
-	if message != "" {
-		systray.SetTooltip(message)
-		time.Sleep(2 * time.Second)
-	}
-	systray.SetTooltip(tooltips.Default)
-}
-
 func toggleAutorun(autorunItem *systray.MenuItem) {
 	var currentlyEnabled bool
 
@@ -72,7 +63,8 @@ func toggleAutorun(autorunItem *systray.MenuItem) {
 	if newState {
 		message = "Autorun enabled"
 	}
-	go showTemporaryTooltip(message)
+	// Use the setTemporaryTooltip from logging.go instead of duplicate function
+	go setTemporaryTooltip(message, 2*time.Second)
 }
 
 func updateAutorunStatus(autorunItem *systray.MenuItem) {
