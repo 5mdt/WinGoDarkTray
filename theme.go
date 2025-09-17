@@ -20,45 +20,65 @@ func withThemeRegistry(access uint32, fn func(registry.Key) error) error {
 	return fn(key)
 }
 
-func (a *App) toggleSystemMode() {
+// getCurrentAppThemeMode reads the current app theme mode from registry
+func getCurrentAppThemeMode() (uint64, error) {
 	var appMode uint64
-
-	err := withThemeRegistry(registry.QUERY_VALUE|registry.SET_VALUE, func(key registry.Key) error {
+	err := withThemeRegistry(registry.QUERY_VALUE, func(key registry.Key) error {
 		var err error
 		appMode, _, err = key.GetIntegerValue("AppsUseLightTheme")
-		if err != nil {
-			return err
-		}
-
-		_, _, err = key.GetIntegerValue("SystemUsesLightTheme")
-		if err != nil {
-			return err
-		}
-
-		var newMode uint32
-		if appMode == 1 {
-			newMode = 0
-			logEvent(eventlog.Info, "Switching both to dark mode...")
-		} else {
-			newMode = 1
-			logEvent(eventlog.Info, "Switching both to light mode...")
-		}
-
-		key.SetDWordValue("AppsUseLightTheme", newMode)
-		key.SetDWordValue("SystemUsesLightTheme", newMode)
-		return nil
+		return err
 	})
+	return appMode, err
+}
 
+// setBothThemeModes sets both app and system theme modes to the same value
+func setBothThemeModes(lightMode bool) error {
+	var newMode uint32
+	if lightMode {
+		newMode = 1
+	} else {
+		newMode = 0
+	}
+
+	return withThemeRegistry(registry.SET_VALUE, func(key registry.Key) error {
+		if err := key.SetDWordValue("AppsUseLightTheme", newMode); err != nil {
+			return err
+		}
+		return key.SetDWordValue("SystemUsesLightTheme", newMode)
+	})
+}
+
+// showTemporaryThemeTooltip displays a temporary tooltip for theme changes
+func showTemporaryThemeTooltip(message string) {
+	go func() {
+		systray.SetTooltip(message)
+		time.Sleep(2 * time.Second)
+		systray.SetTooltip(tooltips.Default)
+	}()
+}
+
+func (a *App) toggleSystemMode() {
+	currentAppMode, err := getCurrentAppThemeMode()
 	if err != nil {
+		showError("Failed to read current theme: " + err.Error())
+		return
+	}
+
+	switchingToLight := currentAppMode == 0
+
+	if err := setBothThemeModes(switchingToLight); err != nil {
 		showError("Failed to toggle system mode: " + err.Error())
 		logEvent(eventlog.Error, "Failed to toggle system mode: "+err.Error())
 		return
 	}
 
-	systray.SetTooltip("Both app and system theme switched")
-	time.Sleep(2 * time.Second)
-	systray.SetTooltip(tooltips.Default)
+	if switchingToLight {
+		logEvent(eventlog.Info, "Switching both to light mode...")
+	} else {
+		logEvent(eventlog.Info, "Switching both to dark mode...")
+	}
 
+	showTemporaryThemeTooltip("Both app and system theme switched")
 	a.updateThemeToggleTitles()
 }
 
@@ -83,10 +103,6 @@ func (a *App) toggleTheme(appKey, sysKey string) {
 		showError("Failed to toggle theme: " + err.Error())
 		return
 	}
-
-	systray.SetTooltip(tooltips.Default)
-	time.Sleep(2 * time.Second)
-	systray.SetTooltip(tooltips.Default)
 
 	a.updateThemeToggleTitles()
 }
