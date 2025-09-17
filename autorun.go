@@ -8,78 +8,81 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-func toggleAutorun(autorunItem *systray.MenuItem) {
-	key, err := openRegistryKey(autorunRegistryKey, registry.QUERY_VALUE|registry.SET_VALUE)
+// withAutorunRegistry executes a function with an open autorun registry key
+func withAutorunRegistry(access uint32, fn func(registry.Key) error) error {
+	key, err := openRegistryKey(autorunRegistryKey, access)
 	if err != nil {
-		showError("Failed to open autorun registry key: " + err.Error())
-		logEvent(eventlog.Error, "Failed to open autorun registry key: "+err.Error())
-		return
+		return err
 	}
 	defer key.Close()
+	return fn(key)
+}
 
-	if isAutorunEnabled(key) {
-		updateAutorun(key, autorunItem, false)
-		logEvent(eventlog.Info, "Autorun disabled")
-		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
-		systray.SetTooltip("Autorun disabled")
-	} else {
-		updateAutorun(key, autorunItem, true)
-		logEvent(eventlog.Info, "Autorun enabled")
+// updateAutorunUI updates the menu item title and tooltip based on current state
+func updateAutorunUI(autorunItem *systray.MenuItem, enabled bool, message string) {
+	if enabled {
 		autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
-		systray.SetTooltip("Autorun enabled")
+	} else {
+		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
 	}
 
-	time.Sleep(2 * time.Second)
+	if message != "" {
+		systray.SetTooltip(message)
+		time.Sleep(2 * time.Second)
+	}
 	systray.SetTooltip(tooltips.Default)
 }
 
-func updateAutorun(key registry.Key, autorunItem *systray.MenuItem, enable bool) {
-	var err error
-	if enable {
-		err = addAutorun(key, autorunItem)
-	} else {
-		err = removeAutorun(key, autorunItem)
-	}
+func toggleAutorun(autorunItem *systray.MenuItem) {
+	var currentlyEnabled bool
+
+	err := withAutorunRegistry(registry.QUERY_VALUE|registry.SET_VALUE, func(key registry.Key) error {
+		currentlyEnabled = isAutorunEnabled(key)
+
+		if currentlyEnabled {
+			if err := key.DeleteValue(appName); err != nil {
+				return err
+			}
+			logEvent(eventlog.Info, "Autorun disabled")
+		} else {
+			exePath, err := getExePath()
+			if err != nil {
+				return err
+			}
+			if err := key.SetStringValue(appName, exePath); err != nil {
+				return err
+			}
+			logEvent(eventlog.Info, "Autorun enabled")
+		}
+		return nil
+	})
+
 	if err != nil {
 		showError("Failed to update autorun: " + err.Error())
+		return
 	}
-}
 
-func removeAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
-	if err := key.DeleteValue(appName); err != nil {
-		return err
+	message := "Autorun disabled"
+	if !currentlyEnabled {
+		message = "Autorun enabled"
 	}
-	autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
-	systray.SetTooltip(tooltips.Default)
-	return nil
-}
-
-func addAutorun(key registry.Key, autorunItem *systray.MenuItem) error {
-	exePath, err := getExePath()
-	if err != nil {
-		return err
-	}
-	if err := key.SetStringValue(appName, exePath); err != nil {
-		return err
-	}
-	autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
-	systray.SetTooltip(tooltips.Default)
-	return nil
+	updateAutorunUI(autorunItem, !currentlyEnabled, message)
 }
 
 func updateAutorunStatus(autorunItem *systray.MenuItem) {
-	key, err := openRegistryKey(autorunRegistryKey, registry.QUERY_VALUE)
+	var enabled bool
+
+	err := withAutorunRegistry(registry.QUERY_VALUE, func(key registry.Key) error {
+		enabled = isAutorunEnabled(key)
+		return nil
+	})
+
 	if err != nil {
 		showError("Failed to open autorun registry key: " + err.Error())
 		return
 	}
-	defer key.Close()
 
-	if isAutorunEnabled(key) {
-		autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
-	} else {
-		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
-	}
+	updateAutorunUI(autorunItem, enabled, "")
 }
 
 func isAutorunEnabled(key registry.Key) bool {
