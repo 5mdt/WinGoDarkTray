@@ -110,11 +110,19 @@ func getEventTypeName(eventType uint32) string {
 
 func showError(message string) {
 	logEventSafe(eventlog.Error, message)
+	showNotificationWithFallback(notificationTexts.Error, message, tooltips.Error+message)
+}
 
-	err := beeep.Notify(notificationTexts.Error, message, "")
-	if err != nil {
-		systray.SetTooltip(tooltips.Error + message)
-		time.Sleep(3 * time.Second)
-		systray.SetTooltip(tooltips.Default)
+// showNotificationWithFallback attempts desktop notification, falls back to tooltip
+func showNotificationWithFallback(title, message, fallbackTooltip string) {
+	if err := beeep.Notify(title, message, ""); err != nil {
+		setTemporaryTooltip(fallbackTooltip, 3*time.Second)
 	}
+}
+
+// setTemporaryTooltip sets a temporary tooltip that reverts after duration
+func setTemporaryTooltip(message string, duration time.Duration) {
+	systray.SetTooltip(message)
+	time.Sleep(duration)
+	systray.SetTooltip(tooltips.Default)
 }
