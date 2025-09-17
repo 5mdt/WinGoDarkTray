@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
@@ -29,13 +30,17 @@ func startUpdateClickHandler(updateNowItem *systray.MenuItem, quitCh chan struct
 }
 
 func checkForUpdate(currentVersion string, updateNowItem *systray.MenuItem) {
-	resp, err := http.Get(githubReleasesAPI)
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(githubReleasesAPI)
 	if err != nil {
 		logEvent(eventlog.Error, "Failed to fetch latest release: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
-
+	if resp.StatusCode != http.StatusOK {
+		logEvent(eventlog.Error, fmt.Sprintf("GitHub releases API returned %d", resp.StatusCode))
+		return
+	}
 	var release struct {
 		TagName string `json:"tag_name"`
 		HTMLURL string `json:"html_url"`

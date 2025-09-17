@@ -104,8 +104,13 @@ func (a *App) updateThemeToggleTitles() {
 	var appMode, systemMode uint64
 
 	err := withThemeRegistry(registry.QUERY_VALUE, func(key registry.Key) error {
-		appMode, _, _ = key.GetIntegerValue("AppsUseLightTheme")
-		systemMode, _, _ = key.GetIntegerValue("SystemUsesLightTheme")
+		var err error
+		if appMode, _, err = key.GetIntegerValue("AppsUseLightTheme"); err != nil {
+			return err
+		}
+		if systemMode, _, err = key.GetIntegerValue("SystemUsesLightTheme"); err != nil {
+			return err
+		}
 		return nil
 	})
 

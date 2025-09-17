@@ -38,7 +38,7 @@ func onExit() {}
 func (a *App) onReady() {
 	a.initializeApp()
 	if err := a.setupEventLog(); err != nil {
-		return
+		// proceed without event log
 	}
 	autorunItem, quitItem := a.createMenuItems()
 	a.initializeMenuState(autorunItem)
@@ -99,5 +99,5 @@ func (a *App) startEventHandlers(autorunItem, quitItem *systray.MenuItem) {
 
 	go a.handleMenuItemClicks(autorunItem, quitItem)
 	go checkForUpdate(a.version, a.updateNowItem)
-	startUpdateClickHandler(a.updateNowItem, quitCh)
+	go startUpdateClickHandler(a.updateNowItem, quitCh)
 }
