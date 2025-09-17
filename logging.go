@@ -2,48 +2,32 @@ package main
 
 import (
 	"fmt"
-	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-var (
-	advapi32                 = syscall.NewLazyDLL("advapi32.dll")
-	procCheckTokenMembership = advapi32.NewProc("CheckTokenMembership")
-	procCreateWellKnownSid   = advapi32.NewProc("CreateWellKnownSid")
-)
-
 const (
-	WinBuiltinAdministratorsSid = 26
+	adminRoleID = "S-1-5-32-544"
 )
 
 func isAdmin() bool {
-	var sid [1024]byte
-	sidSize := uint32(len(sid))
+	token, err := windows.OpenCurrentProcessToken()
+	if err != nil {
+		return false
+	}
+	defer token.Close()
 
-	ret, _, _ := procCreateWellKnownSid.Call(
-		uintptr(WinBuiltinAdministratorsSid),
-		0,
-		uintptr(unsafe.Pointer(&sid[0])),
-		uintptr(unsafe.Pointer(&sidSize)),
-	)
-
-	if ret == 0 {
+	adminSid, err := windows.StringToSid(adminRoleID)
+	if err != nil {
 		return false
 	}
 
-	var isMember int32
-	ret, _, _ = procCheckTokenMembership.Call(
-		0,
-		uintptr(unsafe.Pointer(&sid[0])),
-		uintptr(unsafe.Pointer(&isMember)),
-	)
-
-	return ret != 0 && isMember != 0
+	isMember, err := token.IsMember(adminSid)
+	return err == nil && isMember
 }
 
 func eventLogSourceExists() bool {
