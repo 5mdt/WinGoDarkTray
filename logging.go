@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"syscall"
 	"time"
 	"unsafe"
-	"syscall"
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	advapi32                = syscall.NewLazyDLL("advapi32.dll")
+	advapi32                 = syscall.NewLazyDLL("advapi32.dll")
 	procCheckTokenMembership = advapi32.NewProc("CheckTokenMembership")
 	procCreateWellKnownSid   = advapi32.NewProc("CreateWellKnownSid")
 )

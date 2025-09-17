@@ -9,15 +9,15 @@ import (
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 const githubReleasesAPI = "https://api.github.com/repos/5mdt/WinGoDarkTray/releases/latest"
 
-func checkForUpdate(currentVersion string) {
-
+func checkForUpdate(currentVersion string, updateNowItem *systray.MenuItem) {
 	resp, err := http.Get(githubReleasesAPI)
 	if err != nil {
-		logEvent(3, "Failed to fetch latest release: "+err.Error())
+		logEvent(eventlog.Error, "Failed to fetch latest release: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
@@ -29,7 +29,7 @@ func checkForUpdate(currentVersion string) {
 
 	err = json.NewDecoder(resp.Body).Decode(&release)
 	if err != nil {
-		logEvent(3, "Failed to parse GitHub release response: "+err.Error())
+		logEvent(eventlog.Error, "Failed to parse GitHub release response: "+err.Error())
 		return
 	}
 
@@ -37,7 +37,7 @@ func checkForUpdate(currentVersion string) {
 	current := strings.TrimPrefix(currentVersion, "v")
 
 	if isVersionNewer(latest, current) {
-		logEvent(1, fmt.Sprintf("New version available: %s (current: %s)", latest, current))
+		logEvent(eventlog.Info, fmt.Sprintf("New version available: %s (current: %s)", latest, current))
 		message := fmt.Sprintf("New version %s is available!.", release.TagName)
 
 		err := beeep.Notify(notificationTexts.UpdateAvailableTitle, message, "")
@@ -59,7 +59,6 @@ func checkForUpdate(currentVersion string) {
 }
 
 func runUpdateCommand() {
-
 	cmd := exec.Command("cmd", "/C", "start", "cmd", "/K", "echo Trying to update WinGoDarkTray, using winget app && winget install 5mdt.WinGoDarkTray && echo If nothing installed, please try again later. Winget repository moderators must approve new package first.")
 	err := cmd.Start()
 	if err != nil {
