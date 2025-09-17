@@ -14,6 +14,20 @@ import (
 
 const githubReleasesAPI = "https://api.github.com/repos/5mdt/WinGoDarkTray/releases/latest"
 
+// startUpdateClickHandler starts a goroutine to handle update button clicks
+func startUpdateClickHandler(updateNowItem *systray.MenuItem, quitCh chan struct{}) {
+	go func() {
+		for {
+			select {
+			case <-updateNowItem.ClickedCh:
+				runUpdateCommand()
+			case <-quitCh:
+				return
+			}
+		}
+	}()
+}
+
 func checkForUpdate(currentVersion string, updateNowItem *systray.MenuItem) {
 	resp, err := http.Get(githubReleasesAPI)
 	if err != nil {
@@ -38,23 +52,18 @@ func checkForUpdate(currentVersion string, updateNowItem *systray.MenuItem) {
 
 	if isVersionNewer(latest, current) {
 		logEvent(eventlog.Info, fmt.Sprintf("New version available: %s (current: %s)", latest, current))
-		message := fmt.Sprintf("New version %s is available!.", release.TagName)
-
-		err := beeep.Notify(notificationTexts.UpdateAvailableTitle, message, "")
-		if err != nil {
-			systray.SetTooltip(notificationTexts.UpdateAvailableMessage + release.TagName)
-		}
-
+		showUpdateNotification(release.TagName)
 		updateNowItem.Show()
+	}
+}
 
-		go func() {
-			for {
-				select {
-				case <-updateNowItem.ClickedCh:
-					runUpdateCommand()
-				}
-			}
-		}()
+// showUpdateNotification displays update available notification
+func showUpdateNotification(tagName string) {
+	message := fmt.Sprintf("New version %s is available!.", tagName)
+
+	err := beeep.Notify(notificationTexts.UpdateAvailableTitle, message, "")
+	if err != nil {
+		systray.SetTooltip(notificationTexts.UpdateAvailableMessage + tagName)
 	}
 }
 
