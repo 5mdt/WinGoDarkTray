@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
@@ -27,10 +26,9 @@ func NewApp(version string) *App {
 }
 
 var version string
-var app *App
 
 func main() {
-	app = NewApp(version)
+	app := NewApp(version)
 	_ = installEventLogSource()
 	systray.Run(app.onReady, onExit)
 }
@@ -42,7 +40,6 @@ func (a *App) onReady() {
 	if err := a.setupEventLog(); err != nil {
 		return
 	}
-
 	autorunItem, quitItem := a.createMenuItems()
 	a.initializeMenuState(autorunItem)
 	a.startEventHandlers(autorunItem, quitItem)
