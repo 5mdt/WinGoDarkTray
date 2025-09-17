@@ -45,7 +45,6 @@ func eventLogSourceExists() bool {
 }
 
 func installEventLogSource() error {
-	// If already exists, no need for admin privileges
 	if eventLogSourceExists() {
 		return nil
 	}
@@ -63,21 +62,33 @@ func installEventLogSource() error {
 	return nil
 }
 
-func logEvent(eventType uint32, message string) {
+// logEvent attempts to log to Windows Event Log, falls back to console on failure
+func logEvent(eventType uint32, message string) error {
 	elog, err := eventlog.Open(appName)
 	if err != nil {
+		// Fallback to console logging
 		fmt.Printf("[%s] %s\n", getEventTypeName(eventType), message)
-		return
+		return fmt.Errorf("failed to open event log: %v", err)
 	}
 	defer elog.Close()
 
 	switch eventType {
 	case eventlog.Info:
-		elog.Info(infoEventID, message)
+		return elog.Info(infoEventID, message)
 	case eventlog.Warning:
-		elog.Warning(warningEventID, message)
+		return elog.Warning(warningEventID, message)
 	case eventlog.Error:
-		elog.Error(errorEventID, message)
+		return elog.Error(errorEventID, message)
+	default:
+		return fmt.Errorf("unknown event type: %d", eventType)
+	}
+}
+
+// logEventSafe logs an event and ignores errors (for fire-and-forget logging)
+func logEventSafe(eventType uint32, message string) {
+	if err := logEvent(eventType, message); err != nil {
+		// Silent fallback - event logging failure shouldn't break the app
+		fmt.Printf("[%s] %s\n", getEventTypeName(eventType), message)
 	}
 }
 
@@ -95,7 +106,7 @@ func getEventTypeName(eventType uint32) string {
 }
 
 func showError(message string) {
-	logEvent(eventlog.Error, message)
+	logEventSafe(eventlog.Error, message)
 
 	err := beeep.Notify(notificationTexts.Error, message, "")
 	if err != nil {
