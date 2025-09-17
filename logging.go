@@ -12,6 +12,11 @@ import (
 
 const (
 	adminRoleID = "S-1-5-32-544"
+
+	// Event log message IDs
+	infoEventID    = 1
+	warningEventID = 2
+	errorEventID   = 3
 )
 
 func isAdmin() bool {
@@ -68,11 +73,11 @@ func logEvent(eventType uint32, message string) {
 
 	switch eventType {
 	case eventlog.Info:
-		elog.Info(1, message)
+		elog.Info(infoEventID, message)
 	case eventlog.Warning:
-		elog.Warning(2, message)
+		elog.Warning(warningEventID, message)
 	case eventlog.Error:
-		elog.Error(3, message)
+		elog.Error(errorEventID, message)
 	}
 }
 

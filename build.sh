@@ -38,7 +38,7 @@ build_app() {
   local arch=$1
   local arch_name=$2
   echo "Building the application for $arch_name ($arch)..."
-  GOARCH=$arch GOOS="windows" go build -ldflags=-H=windowsgui -o "$BUILD_DIR/$APP_NAME-$arch_name.exe"
+  GOARCH=$arch GOOS="windows" go build -ldflags=-H=windowsgui -buildvcs=false -o "$BUILD_DIR/$APP_NAME-$arch_name.exe"
 }
 
 # Function to clean up resources
@@ -52,6 +52,7 @@ build() {
   clean_up
   create_build_dir
   check_rsrc_installed
+  go fmt
   embed_icon
   build_app "amd64" "x64"
   build_app "386" "x32"
