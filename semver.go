@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const versionParts = 3 // major.minor.patch
+
 func isVersionNewer(latest, current string) bool {
 	latest = strings.TrimPrefix(latest, "v")
 	current = strings.TrimPrefix(current, "v")
@@ -12,11 +14,12 @@ func isVersionNewer(latest, current string) bool {
 	latestParts := strings.Split(latest, ".")
 	currentParts := strings.Split(current, ".")
 
-	for i := 0; i < 3; i++ {
-		if len(latestParts) <= i || len(currentParts) <= i {
-			return false
-		}
+	maxParts := versionParts
+	if len(latestParts) < maxParts || len(currentParts) < maxParts {
+		return false
+	}
 
+	for i := 0; i < maxParts; i++ {
 		latestNum, err1 := strconv.Atoi(latestParts[i])
 		currentNum, err2 := strconv.Atoi(currentParts[i])
 		if err1 != nil || err2 != nil {
