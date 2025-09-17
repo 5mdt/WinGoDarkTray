@@ -123,6 +123,8 @@ func showNotificationWithFallback(title, message, fallbackTooltip string) {
 // setTemporaryTooltip sets a temporary tooltip that reverts after duration
 func setTemporaryTooltip(message string, duration time.Duration) {
 	systray.SetTooltip(message)
-	time.Sleep(duration)
-	systray.SetTooltip(tooltips.Default)
+	go func() {
+		time.Sleep(duration)
+		systray.SetTooltip(tooltips.Default)
+	}()
 }
