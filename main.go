@@ -25,10 +25,11 @@ func NewApp(version string) *App {
 	}
 }
 
-var version string
+// Build-time version injection - set via ldflags during build
+var buildVersion string
 
 func main() {
-	app := NewApp(version)
+	app := NewApp(buildVersion)
 	systray.Run(app.onReady, onExit)
 }
 
@@ -89,6 +90,14 @@ func (a *App) initializeMenuState(autorunItem *systray.MenuItem) {
 }
 
 func (a *App) startEventHandlers(autorunItem, quitItem *systray.MenuItem) {
+	quitCh := make(chan struct{})
+	go func() {
+		<-quitItem.ClickedCh
+		close(quitCh)
+		systray.Quit()
+	}()
+
 	go a.handleMenuItemClicks(autorunItem, quitItem)
 	go checkForUpdate(a.version, a.updateNowItem)
+	startUpdateClickHandler(a.updateNowItem, quitCh)
 }
