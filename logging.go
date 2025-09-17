@@ -62,12 +62,16 @@ func installEventLogSource() error {
 	return nil
 }
 
+// logToConsole outputs a message to console with event type prefix
+func logToConsole(eventType uint32, message string) {
+	fmt.Printf("[%s] %s\n", getEventTypeName(eventType), message)
+}
+
 // logEvent attempts to log to Windows Event Log, falls back to console on failure
 func logEvent(eventType uint32, message string) error {
 	elog, err := eventlog.Open(appName)
 	if err != nil {
-		// Fallback to console logging
-		fmt.Printf("[%s] %s\n", getEventTypeName(eventType), message)
+		logToConsole(eventType, message)
 		return fmt.Errorf("failed to open event log: %v", err)
 	}
 	defer elog.Close()
@@ -87,8 +91,7 @@ func logEvent(eventType uint32, message string) error {
 // logEventSafe logs an event and ignores errors (for fire-and-forget logging)
 func logEventSafe(eventType uint32, message string) {
 	if err := logEvent(eventType, message); err != nil {
-		// Silent fallback - event logging failure shouldn't break the app
-		fmt.Printf("[%s] %s\n", getEventTypeName(eventType), message)
+		logToConsole(eventType, message)
 	}
 }
 
