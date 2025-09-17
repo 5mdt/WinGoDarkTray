@@ -3,14 +3,12 @@ package main
 import (
 	"time"
 
-	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 const (
 	themeRegistryPath = `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`
-	tooltipDuration   = 2 * time.Second
 )
 
 // withThemeRegistry executes a function with an open theme registry key
@@ -51,15 +49,6 @@ func setBothThemeModes(lightMode bool) error {
 	})
 }
 
-// showTemporaryThemeTooltip displays a temporary tooltip for theme changes
-func showTemporaryThemeTooltip(message string) {
-	go func() {
-		systray.SetTooltip(message)
-		time.Sleep(tooltipDuration)
-		systray.SetTooltip(tooltips.Default)
-	}()
-}
-
 func (a *App) toggleSystemMode() {
 	currentAppMode, err := getCurrentAppThemeMode()
 	if err != nil {
@@ -81,7 +70,7 @@ func (a *App) toggleSystemMode() {
 		logEvent(eventlog.Info, "Switching both to dark mode...")
 	}
 
-	showTemporaryThemeTooltip("Both app and system theme switched")
+	setTemporaryTooltip("Both app and system theme switched", 2*time.Second)
 	a.updateThemeToggleTitles()
 }
 
