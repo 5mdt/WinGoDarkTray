@@ -8,7 +8,10 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-const themeRegistryPath = `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`
+const (
+	themeRegistryPath = `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`
+	tooltipDuration   = 2 * time.Second
+)
 
 // withThemeRegistry executes a function with an open theme registry key
 func withThemeRegistry(access uint32, fn func(registry.Key) error) error {
@@ -52,7 +55,7 @@ func setBothThemeModes(lightMode bool) error {
 func showTemporaryThemeTooltip(message string) {
 	go func() {
 		systray.SetTooltip(message)
-		time.Sleep(2 * time.Second)
+		time.Sleep(tooltipDuration)
 		systray.SetTooltip(tooltips.Default)
 	}()
 }
@@ -82,9 +85,10 @@ func (a *App) toggleSystemMode() {
 	a.updateThemeToggleTitles()
 }
 
-func (a *App) toggleTheme(appKey, sysKey string) {
+// toggleSingleTheme toggles a specific theme setting by registry key
+func (a *App) toggleSingleTheme(registryKey string) {
 	err := withThemeRegistry(registry.QUERY_VALUE|registry.SET_VALUE, func(key registry.Key) error {
-		current, _, err := key.GetIntegerValue(appKey)
+		current, _, err := key.GetIntegerValue(registryKey)
 		if err != nil {
 			return err
 		}
@@ -96,7 +100,7 @@ func (a *App) toggleTheme(appKey, sysKey string) {
 			newMode = 1
 		}
 
-		return key.SetDWordValue(sysKey, newMode)
+		return key.SetDWordValue(registryKey, newMode)
 	})
 
 	if err != nil {
@@ -137,9 +141,9 @@ func (a *App) updateThemeToggleTitles() {
 }
 
 func (a *App) toggleAppMode() {
-	a.toggleTheme("AppsUseLightTheme", "AppsUseLightTheme")
+	a.toggleSingleTheme("AppsUseLightTheme")
 }
 
 func (a *App) toggleWindowsMode() {
-	a.toggleTheme("SystemUsesLightTheme", "SystemUsesLightTheme")
+	a.toggleSingleTheme("SystemUsesLightTheme")
 }
