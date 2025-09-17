@@ -18,14 +18,17 @@ func withAutorunRegistry(access uint32, fn func(registry.Key) error) error {
 	return fn(key)
 }
 
-// updateAutorunUI updates the menu item title and tooltip based on current state
-func updateAutorunUI(autorunItem *systray.MenuItem, enabled bool, message string) {
+// updateAutorunUI updates the menu item title based on current state
+func updateAutorunUI(autorunItem *systray.MenuItem, enabled bool) {
 	if enabled {
 		autorunItem.SetTitle(menuTitles.EnableAutorunChecked)
 	} else {
 		autorunItem.SetTitle(menuTitles.EnableAutorunUnchecked)
 	}
+}
 
+// showTemporaryTooltip displays a message temporarily then restores default tooltip
+func showTemporaryTooltip(message string) {
 	if message != "" {
 		systray.SetTooltip(message)
 		time.Sleep(2 * time.Second)
@@ -62,11 +65,14 @@ func toggleAutorun(autorunItem *systray.MenuItem) {
 		return
 	}
 
+	newState := !currentlyEnabled
+	updateAutorunUI(autorunItem, newState)
+
 	message := "Autorun disabled"
-	if !currentlyEnabled {
+	if newState {
 		message = "Autorun enabled"
 	}
-	updateAutorunUI(autorunItem, !currentlyEnabled, message)
+	go showTemporaryTooltip(message)
 }
 
 func updateAutorunStatus(autorunItem *systray.MenuItem) {
@@ -82,7 +88,7 @@ func updateAutorunStatus(autorunItem *systray.MenuItem) {
 		return
 	}
 
-	updateAutorunUI(autorunItem, enabled, "")
+	updateAutorunUI(autorunItem, enabled)
 }
 
 func isAutorunEnabled(key registry.Key) bool {
