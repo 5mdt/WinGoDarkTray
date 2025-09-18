@@ -6,7 +6,8 @@ readonly APP_NAME="WinGoDarkTray"
 readonly ICON_FILE="icon.ico"
 readonly BUILD_DIR="./build"
 readonly RSRC_VERSION="v0.10.2"
-readonly LDFLAGS="-s -w -H=windowsgui"  # -s: strip symbol table, -w: strip debug info, -H: hide console window
+readonly VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo 'v0.0.0-dev')}"
+readonly LDFLAGS="-s -w -H=windowsgui -X main.buildVersion=${VERSION}"  # -s: strip symbol table, -w: strip debug info, -H: hide console window, -X: inject version
 readonly BUILD_OPTS="-trimpath -buildvcs=false"  # -trimpath: remove file paths, -buildvcs: disable VCS stamping
 
 # Architecture targets: GOARCH:suffix
