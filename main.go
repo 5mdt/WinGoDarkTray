@@ -40,6 +40,7 @@ func (a *App) onReady() {
 	if err := a.setupEventLog(); err != nil {
 		// proceed without event log
 	}
+	logEvent(eventlog.Info, fmt.Sprintf("WinGoDarkTray started and running, Version: %s", a.version))
 	autorunItem, quitItem := a.createMenuItems()
 	a.initializeMenuState(autorunItem)
 	a.startEventHandlers(autorunItem, quitItem)
@@ -48,7 +49,6 @@ func (a *App) onReady() {
 func (a *App) initializeApp() {
 	systray.SetIcon(icon)
 	systray.SetTooltip(tooltips.Default)
-	logEvent(eventlog.Info, fmt.Sprintf("WinGoDarkTray started and running, Version: %s", a.version))
 }
 
 func (a *App) setupEventLog() error {
@@ -63,8 +63,9 @@ func (a *App) setupEventLog() error {
 func (a *App) createMenuItems() (*systray.MenuItem, *systray.MenuItem) {
 	appNameItem := systray.AddMenuItem(menuTitles.AppName, "")
 	go func() {
-		<-appNameItem.ClickedCh
-		openBrowser(projectLink)
+		for range appNameItem.ClickedCh {
+			openBrowser(projectLink)
+		}
 	}()
 
 	autorunItem := systray.AddMenuItem(menuTitles.EnableAutorun, "")
