@@ -5,6 +5,7 @@ set -euo pipefail
 readonly APP_NAME="WinGoDarkTray"
 readonly ICON_FILE="icon.ico"
 readonly BUILD_DIR="./build"
+readonly RSRC_VERSION="v0.10.2"
 readonly LDFLAGS="-s -w -H=windowsgui"  # -s: strip symbol table, -w: strip debug info, -H: hide console window
 readonly BUILD_OPTS="-trimpath -buildvcs=false"  # -trimpath: remove file paths, -buildvcs: disable VCS stamping
 
@@ -44,8 +45,8 @@ validate_requirements() {
   command -v go >/dev/null || { log_error "Go not installed"; exit 1; }
 
   if ! command -v rsrc >/dev/null; then
-    log_info "📦 Installing rsrc tool..."
-    go install github.com/akavel/rsrc@latest || { log_error "Failed to install rsrc"; exit 1; }
+    log_info "📦 Installing rsrc tool (${RSRC_VERSION})..."
+    go install "github.com/akavel/rsrc@${RSRC_VERSION}" || { log_error "Failed to install rsrc"; exit 1; }
   fi
 
   log_success "All requirements validated"
@@ -55,7 +56,7 @@ validate_requirements() {
 prepare_build() {
   log_info "🧹 Preparing build environment..."
 
-  # Remove all build artifacts
+  # Remove old build artifacts
   find . -name "*.exe" -o -name "*.syso" | xargs -r rm -f
 
   # Create build directory
@@ -69,27 +70,27 @@ prepare_build() {
 
 # Build for all targets
 build_targets() {
-  log_info "🖼️  Embedding icon resource..."
-  rsrc -ico "$ICON_FILE" || { log_error "Failed to embed icon"; exit 1; }
-
   for target in "${TARGETS[@]}"; do
     local arch="${target%:*}"
     local suffix="${target#*:}"
     local output="$BUILD_DIR/$APP_NAME-$suffix.exe"
 
     log_build "Building for $arch ($suffix)..."
+
+    # Generate arch-specific .syso file
+    log_info "🖼️  Generating $arch-specific icon resource..."
+    GOARCH="$arch" GOOS="windows" rsrc -ico "$ICON_FILE" \
+      || { log_error "Failed to embed icon for $arch"; exit 1; }
+
+    # Build for target architecture
     GOARCH="$arch" GOOS="windows" go build $BUILD_OPTS -ldflags="$LDFLAGS" -o "$output" \
       || { log_error "Build failed for $arch"; exit 1; }
 
+    # Clean up arch-specific .syso immediately
+    find . -name "*.syso" -delete
+
     log_success "Built: $(basename "$output")"
   done
-}
-
-# Cleanup post-build artifacts
-cleanup_artifacts() {
-  log_info "🗑️  Cleaning up build artifacts..."
-  find . -name "*.syso" -delete
-  log_success "Cleanup complete"
 }
 
 # Main execution
@@ -99,7 +100,6 @@ main() {
   validate_requirements
   prepare_build
   build_targets
-  cleanup_artifacts
 
   log_header "🎉 Build completed successfully!"
   log_info "📦 Artifacts created in: $BUILD_DIR/"
