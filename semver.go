@@ -12,11 +12,12 @@ func isVersionNewer(latest, current string) bool {
 	latestParts := strings.Split(latest, ".")
 	currentParts := strings.Split(current, ".")
 
-	for i := 0; i < 3; i++ {
-		if len(latestParts) <= i || len(currentParts) <= i {
-			return false
-		}
+	// Normalize to same length by padding with zeros
+	maxLen := max(len(latestParts), len(currentParts))
+	latestParts = padVersionParts(latestParts, maxLen)
+	currentParts = padVersionParts(currentParts, maxLen)
 
+	for i := 0; i < maxLen; i++ {
 		latestNum, err1 := strconv.Atoi(latestParts[i])
 		currentNum, err2 := strconv.Atoi(currentParts[i])
 		if err1 != nil || err2 != nil {
@@ -31,4 +32,18 @@ func isVersionNewer(latest, current string) bool {
 	}
 
 	return false
+}
+
+func padVersionParts(parts []string, targetLen int) []string {
+	for len(parts) < targetLen {
+		parts = append(parts, "0")
+	}
+	return parts
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

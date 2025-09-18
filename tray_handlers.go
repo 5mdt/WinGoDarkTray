@@ -2,15 +2,15 @@ package main
 
 import "github.com/getlantern/systray"
 
-func handleMenuItemClicks(toggleSystemItem, toggleAppItem, toggleWindowsItem, autorunItem, quitItem *systray.MenuItem) {
+func (a *App) handleMenuItemClicks(autorunItem, quitItem *systray.MenuItem) {
 	for {
 		select {
-		case <-toggleSystemItem.ClickedCh:
-			toggleSystemMode()
-		case <-toggleAppItem.ClickedCh:
-			toggleAppMode()
-		case <-toggleWindowsItem.ClickedCh:
-			toggleWindowsMode()
+		case <-a.toggleSystemItem.ClickedCh:
+			a.toggleSystemMode()
+		case <-a.toggleAppItem.ClickedCh:
+			a.toggleAppMode()
+		case <-a.toggleWindowsItem.ClickedCh:
+			a.toggleWindowsMode()
 		case <-autorunItem.ClickedCh:
 			toggleAutorun(autorunItem)
 		case <-quitItem.ClickedCh:

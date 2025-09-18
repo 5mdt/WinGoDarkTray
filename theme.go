@@ -3,112 +3,153 @@ package main
 import (
 	"time"
 
-	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-func toggleSystemMode() {
-	key, err := openRegistryKey(`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
+const (
+	themeRegistryPath     = `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`
+	regValAppsUseLight    = "AppsUseLightTheme"
+	regValSystemUsesLight = "SystemUsesLightTheme"
+)
+
+// withThemeRegistry executes a function with an open theme registry key
+func withThemeRegistry(access uint32, fn func(registry.Key) error) error {
+	key, err := openRegistryKey(themeRegistryPath, access)
 	if err != nil {
-		showError("Failed to open registry key: " + err.Error())
-		logEvent(eventlog.Error, "Failed to open registry key for system theme: "+err.Error())
-		return
+		return err
 	}
 	defer key.Close()
-
-	appMode, _, err := key.GetIntegerValue("AppsUseLightTheme")
-	if err != nil {
-		showError("Failed to read AppsUseLightTheme: " + err.Error())
-		logEvent(eventlog.Error, "Failed to read AppsUseLightTheme: "+err.Error())
-		return
-	}
-	_, _, err = key.GetIntegerValue("SystemUsesLightTheme")
-	if err != nil {
-		showError("Failed to read SystemUsesLightTheme: " + err.Error())
-		logEvent(eventlog.Error, "Failed to read SystemUsesLightTheme: "+err.Error())
-		return
-	}
-
-	var newMode uint32
-	if appMode == 1 {
-		newMode = 0
-		logEvent(eventlog.Info, "Switching both to dark mode...")
-	} else {
-		newMode = 1
-		logEvent(eventlog.Info, "Switching both to light mode...")
-	}
-
-	key.SetDWordValue("AppsUseLightTheme", newMode)
-	key.SetDWordValue("SystemUsesLightTheme", newMode)
-
-	systray.SetTooltip("Both app and system theme switched")
-	time.Sleep(2 * time.Second)
-	systray.SetTooltip(tooltips.Default)
-
-	updateThemeToggleTitles(toggleSystemItem, toggleAppItem, toggleWindowsItem)
+	return fn(key)
 }
 
-func toggleTheme(appKey, sysKey string) {
-	key, err := openRegistryKey(`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE|registry.SET_VALUE)
-	if err != nil {
-		showError("Failed to open registry key: " + err.Error())
-		return
-	}
-	defer key.Close()
-
-	current, _, err := key.GetIntegerValue(appKey)
-	if err != nil {
-		showError("Failed to read registry value: " + err.Error())
-		return
-	}
-
-	var newMode uint32
-	if current == 1 {
-		newMode = 0
-	} else {
-		newMode = 1
-	}
-
-	key.SetDWordValue(sysKey, newMode)
-
-	systray.SetTooltip(tooltips.Default)
-	time.Sleep(2 * time.Second)
-	systray.SetTooltip(tooltips.Default)
-
-	updateThemeToggleTitles(toggleSystemItem, toggleAppItem, toggleWindowsItem)
+// getCurrentAppThemeMode reads the current app theme mode from registry
+func getCurrentAppThemeMode() (uint64, error) {
+	var appMode uint64
+	err := withThemeRegistry(registry.QUERY_VALUE, func(key registry.Key) error {
+		var err error
+		appMode, _, err = key.GetIntegerValue(regValAppsUseLight)
+		return err
+	})
+	return appMode, err
 }
 
-func updateThemeToggleTitles(bothItem, appItem, windowsItem *systray.MenuItem) {
-	key, err := openRegistryKey(`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE)
+// setBothThemeModes sets both app and system theme modes to the same value
+func setBothThemeModes(lightMode bool) error {
+	var newMode uint32
+	if lightMode {
+		newMode = 1
+	} else {
+		newMode = 0
+	}
+
+	return withThemeRegistry(registry.SET_VALUE, func(key registry.Key) error {
+		if err := key.SetDWordValue(regValAppsUseLight, newMode); err != nil {
+			return err
+		}
+		return key.SetDWordValue(regValSystemUsesLight, newMode)
+	})
+}
+
+func (a *App) toggleSystemMode() {
+	currentAppMode, err := getCurrentAppThemeMode()
 	if err != nil {
 		showError("Failed to read current theme: " + err.Error())
 		return
 	}
-	defer key.Close()
 
-	appMode, _, _ := key.GetIntegerValue("AppsUseLightTheme")
-	systemMode, _, _ := key.GetIntegerValue("SystemUsesLightTheme")
+	switchingToLight := currentAppMode == 0
 
-	if appMode == 1 {
-		appItem.SetTitle(menuTitles.ToggleAppToDark)
-		bothItem.SetTitle(menuTitles.ToggleBothToDark)
+	if err := setBothThemeModes(switchingToLight); err != nil {
+		showError("Failed to toggle system mode: " + err.Error())
+		logEvent(eventlog.Error, "Failed to toggle system mode: "+err.Error())
+		return
+	}
+
+	if switchingToLight {
+		logEvent(eventlog.Info, "Switching both to light mode...")
 	} else {
-		appItem.SetTitle(menuTitles.ToggleAppToLight)
-		bothItem.SetTitle(menuTitles.ToggleBothToLight)
+		logEvent(eventlog.Info, "Switching both to dark mode...")
+	}
+
+	target := "Light"
+	if !switchingToLight {
+		target = "Dark"
+	}
+	setTemporaryTooltip("Switched both to "+target+" mode", 2*time.Second)
+	a.updateThemeToggleTitles()
+}
+
+// toggleSingleTheme toggles a specific theme setting by registry key
+func (a *App) toggleSingleTheme(registryKey string) {
+	err := withThemeRegistry(registry.QUERY_VALUE|registry.SET_VALUE, func(key registry.Key) error {
+		current, _, err := key.GetIntegerValue(registryKey)
+		if err != nil {
+			return err
+		}
+
+		var newMode uint32
+		if current == 1 {
+			newMode = 0
+		} else {
+			newMode = 1
+		}
+
+		return key.SetDWordValue(registryKey, newMode)
+	})
+
+	if err != nil {
+		showError("Failed to toggle theme (" + registryKey + "): " + err.Error())
+		logEvent(eventlog.Error, "Failed to toggle theme ("+registryKey+"): "+err.Error())
+		return
+	}
+
+	setTemporaryTooltip("Theme toggled", 2*time.Second)
+	a.updateThemeToggleTitles()
+}
+
+func (a *App) updateThemeToggleTitles() {
+	var appMode, systemMode uint64
+
+	err := withThemeRegistry(registry.QUERY_VALUE, func(key registry.Key) error {
+		var err error
+		if appMode, _, err = key.GetIntegerValue(regValAppsUseLight); err != nil {
+			return err
+		}
+		if systemMode, _, err = key.GetIntegerValue(regValSystemUsesLight); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		showError("Failed to read current theme: " + err.Error())
+		return
+	}
+
+	bothLight := (appMode == 1 && systemMode == 1)
+	if appMode == 1 {
+		a.toggleAppItem.SetTitle(menuTitles.ToggleAppToDark)
+	} else {
+		a.toggleAppItem.SetTitle(menuTitles.ToggleAppToLight)
+	}
+	if bothLight {
+		a.toggleSystemItem.SetTitle(menuTitles.ToggleBothToDark)
+	} else {
+		a.toggleSystemItem.SetTitle(menuTitles.ToggleBothToLight)
 	}
 
 	if systemMode == 1 {
-		windowsItem.SetTitle(menuTitles.ToggleWinToDark)
+		a.toggleWindowsItem.SetTitle(menuTitles.ToggleWinToDark)
 	} else {
-		windowsItem.SetTitle(menuTitles.ToggleWinToLight)
+		a.toggleWindowsItem.SetTitle(menuTitles.ToggleWinToLight)
 	}
 }
 
-func toggleAppMode() {
-	toggleTheme("AppsUseLightTheme", "AppsUseLightTheme")
+func (a *App) toggleAppMode() {
+	a.toggleSingleTheme(regValAppsUseLight)
 }
 
-func toggleWindowsMode() {
-	toggleTheme("SystemUsesLightTheme", "SystemUsesLightTheme")
+func (a *App) toggleWindowsMode() {
+	a.toggleSingleTheme(regValSystemUsesLight)
 }

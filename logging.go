@@ -6,25 +6,38 @@ import (
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
-	"golang.org/x/sys/windows/registry"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
+const (
+	adminRoleID = "S-1-5-32-544"
+
+	// Event log message IDs
+	infoEventID    = 1
+	warningEventID = 2
+	errorEventID   = 3
+)
+
 func isAdmin() bool {
-
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`, registry.QUERY_VALUE)
+	token, err := windows.OpenCurrentProcessToken()
 	if err != nil {
-
 		return false
 	}
-	defer key.Close()
-	return true
+	defer token.Close()
+
+	adminSid, err := windows.StringToSid(adminRoleID)
+	if err != nil {
+		return false
+	}
+
+	isMember, err := token.IsMember(adminSid)
+	return err == nil && isMember
 }
 
 func eventLogSourceExists() bool {
 	elog, err := eventlog.Open(appName)
 	if err != nil {
-
 		return false
 	}
 	defer elog.Close()
@@ -32,14 +45,12 @@ func eventLogSourceExists() bool {
 }
 
 func installEventLogSource() error {
-
-	if !isAdmin() {
-		return fmt.Errorf("this action requires administrative privileges")
+	if eventLogSourceExists() {
+		return nil
 	}
 
-	if eventLogSourceExists() {
-
-		return nil
+	if !isAdmin() {
+		return fmt.Errorf("administrative privileges required for event log registration")
 	}
 
 	err := eventlog.InstallAsEventCreate(appName, eventlog.Error|eventlog.Warning|eventlog.Info)
@@ -51,34 +62,69 @@ func installEventLogSource() error {
 	return nil
 }
 
-func logEvent(eventType uint32, message string) {
+// logToConsole outputs a message to console with event type prefix
+func logToConsole(eventType uint32, message string) {
+	fmt.Printf("[%s] %s\n", getEventTypeName(eventType), message)
+}
+
+// logEvent attempts to log to Windows Event Log, falls back to console on failure
+func logEvent(eventType uint32, message string) error {
 	elog, err := eventlog.Open(appName)
 	if err != nil {
-
-		fmt.Println("Failed to open event log:", err)
-		return
+		logToConsole(eventType, message)
+		return fmt.Errorf("failed to open event log: %v", err)
 	}
 	defer elog.Close()
 
 	switch eventType {
 	case eventlog.Info:
-		elog.Info(1, message)
+		return elog.Info(infoEventID, message)
 	case eventlog.Warning:
-		elog.Warning(2, message)
+		return elog.Warning(warningEventID, message)
 	case eventlog.Error:
-		elog.Error(3, message)
+		return elog.Error(errorEventID, message)
+	default:
+		return fmt.Errorf("unknown event type: %d", eventType)
+	}
+}
+
+// logEventSafe logs an event and ignores errors (for fire-and-forget logging)
+func logEventSafe(eventType uint32, message string) {
+	if err := logEvent(eventType, message); err != nil {
+		logToConsole(eventType, message)
+	}
+}
+
+func getEventTypeName(eventType uint32) string {
+	switch eventType {
+	case eventlog.Info:
+		return "INFO"
+	case eventlog.Warning:
+		return "WARNING"
+	case eventlog.Error:
+		return "ERROR"
+	default:
+		return "UNKNOWN"
 	}
 }
 
 func showError(message string) {
+	logEventSafe(eventlog.Error, message)
+	showNotificationWithFallback(notificationTexts.Error, message, tooltips.Error+message)
+}
 
-	logEvent(eventlog.Error, message)
-
-	err := beeep.Notify(notificationTexts.Error, message, "")
-	if err != nil {
-
-		systray.SetTooltip(tooltips.Error + message)
-		time.Sleep(3 * time.Second)
-		systray.SetTooltip(tooltips.Default)
+// showNotificationWithFallback attempts desktop notification, falls back to tooltip
+func showNotificationWithFallback(title, message, fallbackTooltip string) {
+	if err := beeep.Notify(title, message, ""); err != nil {
+		setTemporaryTooltip(fallbackTooltip, 3*time.Second)
 	}
+}
+
+// setTemporaryTooltip sets a temporary tooltip that reverts after duration
+func setTemporaryTooltip(message string, duration time.Duration) {
+	systray.SetTooltip(message)
+	go func() {
+		time.Sleep(duration)
+		systray.SetTooltip(tooltips.Default)
+	}()
 }

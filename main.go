@@ -2,62 +2,102 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-var version string
+// App holds the application state and dependencies
+type App struct {
+	toggleSystemItem  *systray.MenuItem
+	toggleAppItem     *systray.MenuItem
+	toggleWindowsItem *systray.MenuItem
+	updateNowItem     *systray.MenuItem
+	version           string
+}
 
-func main() {
+// NewApp creates a new application instance
+func NewApp(version string) *App {
 	if version == "" {
 		version = "v0.0.0"
 	}
-	_ = installEventLogSource()
-	systray.Run(onReady, onExit)
+	return &App{
+		version: version,
+	}
+}
+
+// Build-time version injection - set via ldflags during build
+var buildVersion string
+
+func main() {
+	app := NewApp(buildVersion)
+	systray.Run(app.onReady, onExit)
 }
 
 func onExit() {}
 
-func onReady() {
+func (a *App) onReady() {
+	a.initializeApp()
+	if err := a.setupEventLog(); err != nil {
+		// proceed without event log
+	}
+	logEvent(eventlog.Info, fmt.Sprintf("WinGoDarkTray started and running, Version: %s", a.version))
+	autorunItem, quitItem := a.createMenuItems()
+	a.initializeMenuState(autorunItem)
+	a.startEventHandlers(autorunItem, quitItem)
+}
 
+func (a *App) initializeApp() {
 	systray.SetIcon(icon)
 	systray.SetTooltip(tooltips.Default)
+}
 
-	logEvent(eventlog.Info, fmt.Sprintf("WinGoDarkTray started and running, Version: %s", version))
-
-	err := installEventLogSource()
-	if err != nil {
-		showError("Failed to install event log source: " + err.Error())
-		logEvent(eventlog.Error, fmt.Sprintf("Failed to install event log source: %s, Version: %s", err.Error(), version))
-		return
+func (a *App) setupEventLog() error {
+	if err := installEventLogSource(); err != nil {
+		logEvent(eventlog.Warning, fmt.Sprintf("Event log install failed: %s; continuing without event log. Version: %s", err.Error(), a.version))
+		return err
 	}
+	return nil
+}
 
+func (a *App) createMenuItems() (*systray.MenuItem, *systray.MenuItem) {
 	appNameItem := systray.AddMenuItem(menuTitles.AppName, "")
 	go func() {
-		<-appNameItem.ClickedCh
-		openBrowser(projectLink)
+		for range appNameItem.ClickedCh {
+			openBrowser(projectLink)
+		}
 	}()
 
 	autorunItem := systray.AddMenuItem(menuTitles.EnableAutorun, "")
 	systray.AddSeparator()
 
-	toggleSystemItem := systray.AddMenuItem("", "")
+	a.toggleSystemItem = systray.AddMenuItem("", "")
 	systray.AddSeparator()
 
-	toggleAppItem := systray.AddMenuItem("", "")
-	toggleWindowsItem := systray.AddMenuItem("", "")
+	a.toggleAppItem = systray.AddMenuItem("", "")
+	a.toggleWindowsItem = systray.AddMenuItem("", "")
 	systray.AddSeparator()
 
-	updateNowItem = systray.AddMenuItem(menuTitles.UpdateNow, "Click to update the app")
-	updateNowItem.Hide()
+	a.updateNowItem = systray.AddMenuItem(menuTitles.UpdateNow, "Click to update the app")
+	a.updateNowItem.Hide()
 
 	quitItem := systray.AddMenuItem(menuTitles.Quit, "Exit the application")
+	return autorunItem, quitItem
+}
 
+func (a *App) initializeMenuState(autorunItem *systray.MenuItem) {
 	updateAutorunStatus(autorunItem)
-	updateThemeToggleTitles(toggleSystemItem, toggleAppItem, toggleWindowsItem)
+	a.updateThemeToggleTitles()
+}
 
-	go handleMenuItemClicks(toggleSystemItem, toggleAppItem, toggleWindowsItem, autorunItem, quitItem)
+func (a *App) startEventHandlers(autorunItem, quitItem *systray.MenuItem) {
+	quitCh := make(chan struct{})
+	go func() {
+		<-quitItem.ClickedCh
+		close(quitCh)
+		systray.Quit()
+	}()
 
-	go checkForUpdate(version)
+	go a.handleMenuItemClicks(autorunItem, quitItem)
+	go checkForUpdate(a.version, a.updateNowItem)
+	go startUpdateClickHandler(a.updateNowItem, quitCh)
 }
