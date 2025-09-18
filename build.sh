@@ -1,64 +1,114 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# Define variables
-APP_NAME="WinGoDarkTray"
-ICON_FILE="icon.ico"
-BUILD_DIR="./build"
+# Configuration
+readonly APP_NAME="WinGoDarkTray"
+readonly ICON_FILE="icon.ico"
+readonly BUILD_DIR="./build"
+readonly LDFLAGS="-s -w -H=windowsgui"  # -s: strip symbol table, -w: strip debug info, -H: hide console window
+readonly BUILD_OPTS="-trimpath -buildvcs=false"  # -trimpath: remove file paths, -buildvcs: disable VCS stamping
 
-# Function to check if rsrc is installed
-check_rsrc_installed() {
-  command -v rsrc >/dev/null 2>&1 || {
-    echo "rsrc not found, installing...";
-    go install github.com/akavel/rsrc@latest;
-  }
+# Architecture targets: GOARCH:suffix
+readonly TARGETS=(
+  "amd64:x64"
+  "386:x32"
+  "arm64:arm64"
+)
+
+# Colors (only if terminal supports them)
+if [[ -t 1 ]]; then
+  readonly RED='\033[0;31m'
+  readonly GREEN='\033[0;32m'
+  readonly BLUE='\033[0;34m'
+  readonly YELLOW='\033[1;33m'
+  readonly CYAN='\033[0;36m'
+  readonly BOLD='\033[1m'
+  readonly RESET='\033[0m'
+else
+  readonly RED='' GREEN='' BLUE='' YELLOW='' CYAN='' BOLD='' RESET=''
+fi
+
+# Logging functions
+log_info() { echo -e "${CYAN}→${RESET} $*"; }
+log_success() { echo -e "${GREEN}✓${RESET} $*"; }
+log_error() { echo -e "${RED}✗ Error:${RESET} $*" >&2; }
+log_build() { echo -e "${YELLOW}🔨${RESET} $*"; }
+log_header() { echo -e "${BOLD}${BLUE}$*${RESET}"; }
+
+# Validation
+validate_requirements() {
+  log_info "🔍 Validating requirements..."
+
+  [[ -f "$ICON_FILE" ]] || { log_error "Icon file '$ICON_FILE' not found"; exit 1; }
+
+  command -v go >/dev/null || { log_error "Go not installed"; exit 1; }
+
+  if ! command -v rsrc >/dev/null; then
+    log_info "📦 Installing rsrc tool..."
+    go install github.com/akavel/rsrc@latest || { log_error "Failed to install rsrc"; exit 1; }
+  fi
+
+  log_success "All requirements validated"
 }
 
-# Function to clean up old build artifacts
-clean_up() {
-  echo "Cleaning up old artifacts..."
-  find . -name "*.exe" -delete
-  find $BUILD_DIR -name "*.exe" -delete
+# Clean and prepare
+prepare_build() {
+  log_info "🧹 Preparing build environment..."
+
+  # Remove all build artifacts
+  find . -name "*.exe" -o -name "*.syso" | xargs -r rm -f
+
+  # Create build directory
+  mkdir -p "$BUILD_DIR"
+
+  # Format code
+  go fmt ./...
+
+  log_success "Build environment ready"
+}
+
+# Build for all targets
+build_targets() {
+  log_info "🖼️  Embedding icon resource..."
+  rsrc -ico "$ICON_FILE" || { log_error "Failed to embed icon"; exit 1; }
+
+  for target in "${TARGETS[@]}"; do
+    local arch="${target%:*}"
+    local suffix="${target#*:}"
+    local output="$BUILD_DIR/$APP_NAME-$suffix.exe"
+
+    log_build "Building for $arch ($suffix)..."
+    GOARCH="$arch" GOOS="windows" go build $BUILD_OPTS -ldflags="$LDFLAGS" -o "$output" \
+      || { log_error "Build failed for $arch"; exit 1; }
+
+    log_success "Built: $(basename "$output")"
+  done
+}
+
+# Cleanup post-build artifacts
+cleanup_artifacts() {
+  log_info "🗑️  Cleaning up build artifacts..."
   find . -name "*.syso" -delete
+  log_success "Cleanup complete"
 }
 
-# Function to create build directory if it doesn't exist
-create_build_dir() {
-  echo "Ensuring the build directory exists..."
-  mkdir -p $BUILD_DIR
+# Main execution
+main() {
+  log_header "🚀 Starting build process for $APP_NAME"
+
+  validate_requirements
+  prepare_build
+  build_targets
+  cleanup_artifacts
+
+  log_header "🎉 Build completed successfully!"
+  log_info "📦 Artifacts created in: $BUILD_DIR/"
+  if ls "$BUILD_DIR"/*.exe >/dev/null 2>&1; then
+    echo -e "${BOLD}${GREEN}$(ls -la "$BUILD_DIR"/*.exe)${RESET}"
+  fi
 }
 
-# Function to embed the icon into the Go application
-embed_icon() {
-  echo "Embedding the icon..."
-  rsrc -ico "$ICON_FILE"
-}
-
-# Function to build the Go application for a specific architecture
-build_app() {
-  local arch=$1
-  local arch_name=$2
-  echo "Building the application for $arch_name ($arch)..."
-  GOARCH=$arch GOOS="windows" go build -ldflags=-H=windowsgui -buildvcs=false -o "$BUILD_DIR/$APP_NAME-$arch_name.exe"
-}
-
-# Function to clean up resources
-remove_syso_files() {
-  echo "Removing .syso files..."
-  find . -name "*.syso" -delete
-}
-
-# Main build function
-build() {
-  clean_up
-  create_build_dir
-  check_rsrc_installed
-  go fmt
-  embed_icon
-  build_app "amd64" "x64"
-  build_app "386" "x32"
-  remove_syso_files
-  echo "Build complete."
-}
-
-# Run the build process
-build
+# Execute if run directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
