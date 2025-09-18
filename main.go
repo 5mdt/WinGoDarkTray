@@ -53,8 +53,7 @@ func (a *App) initializeApp() {
 
 func (a *App) setupEventLog() error {
 	if err := installEventLogSource(); err != nil {
-		showError("Failed to install event log source: " + err.Error())
-		logEvent(eventlog.Error, fmt.Sprintf("Failed to install event log source: %s, Version: %s", err.Error(), a.version))
+		logEvent(eventlog.Warning, fmt.Sprintf("Event log install failed: %s; continuing without event log. Version: %s", err.Error(), a.version))
 		return err
 	}
 	return nil
