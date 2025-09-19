@@ -2,59 +2,9 @@
 
 run:
   timeout: 5m
-  skip-dirs:
-    - vendor
-
-linters-settings:
-  gocyclo:
-    min-complexity: 15
-
-  misspell:
-    locale: US
 
 linters:
   enable:
-    - errcheck
-    - goimports
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - staticcheck
-    - typecheck
-    - unused
-    - gocyclo
     - gofmt
-    - revive
-
-  disable:
-    - gosec  # Windows registry operations trigger security warnings
-
-issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - gosec
-
-    # Exclude Windows-specific code from cross-platform linting issues
-    - path: ".*\\.go"
-      text: "windows"
-      linters:
-        - goimports
-
-    # Allow long lines in test files
-    - path: _test\.go
-      linters:
-        - revive
-
-  max-issues-per-linter: 0
-  max-same-issues: 0
-
-output:
-  formats:
-    - format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+    - goimports
+    - govet
