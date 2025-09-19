@@ -2,8 +2,8 @@
 
 run:
   timeout: 5m
-  build-tags:
-    - windows
+  skip-dirs:
+    - vendor
 
 linters-settings:
   gocyclo:

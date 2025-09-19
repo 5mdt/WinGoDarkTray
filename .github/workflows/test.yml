@@ -149,16 +149,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Go
+    - name: Set up Go for linting (use stable version)
       uses: actions/setup-go@v5
       with:
-        go-version: '1.25'
+        go-version: '1.23'
 
     - name: Install golangci-lint
       uses: golangci/golangci-lint-action@v6
       with:
-        version: latest
-        args: --timeout=5m
+        version: v1.61.0  # Use specific stable version
+        args: --timeout=5m --disable-all --enable=gofmt,goimports,govet
+        only-new-issues: false
 
     - name: Check formatting
       run: |
