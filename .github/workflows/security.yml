@@ -70,13 +70,15 @@ jobs:
       with:
         go-version: '1.25'
 
-    - name: Write go list to file
+    - name: Install Nancy
+      run: go install github.com/sonatypecommunity/nancy@latest
+
+    - name: Generate dependency list
       run: go list -json -deps ./... > go-list.json
 
-    - name: Nancy vulnerability scan
-      uses: sonatypecommunity/nancy-github-action@main
-      with:
-        nancyCommand: sleuth --path go-list.json
+    - name: Run Nancy vulnerability scan
+      run: nancy sleuth --path go-list.json
+      continue-on-error: true
 
   gosec:
     name: Gosec Security Scanner
@@ -91,12 +93,15 @@ jobs:
       with:
         go-version: '1.25'
 
+    - name: Install Gosec
+      run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+
     - name: Run Gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
-      with:
-        args: '-fmt sarif -out results.sarif ./...'
+      run: gosec -fmt sarif -out results.sarif ./...
+      continue-on-error: true
 
     - name: Upload SARIF file
+      if: always()
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: results.sarif

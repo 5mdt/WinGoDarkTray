@@ -9,23 +9,19 @@ linters-settings:
   gocyclo:
     min-complexity: 15
 
-  golint:
+  revive:
     min-confidence: 0.8
 
   govet:
-    check-shadowing: true
+    shadow: true
 
   misspell:
     locale: US
-
-  unused:
-    check-exported: false
 
 linters:
   enable:
     - errcheck
     - goimports
-    - golint
     - gosimple
     - govet
     - ineffassign
@@ -33,16 +29,12 @@ linters:
     - staticcheck
     - typecheck
     - unused
-    - varcheck
-    - deadcode
-    - structcheck
     - gocyclo
     - gofmt
     - revive
 
   disable:
     - gosec  # Windows registry operations trigger security warnings
-    - maligned  # Struct alignment not critical for this app
 
 issues:
   exclude-rules:
@@ -51,7 +43,6 @@ issues:
       linters:
         - gocyclo
         - errcheck
-        - dupl
         - gosec
 
     # Exclude Windows-specific code from cross-platform linting issues
@@ -63,12 +54,13 @@ issues:
     # Allow long lines in test files
     - path: _test\.go
       linters:
-        - lll
+        - revive
 
   max-issues-per-linter: 0
   max-same-issues: 0
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true

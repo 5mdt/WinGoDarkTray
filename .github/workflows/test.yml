@@ -38,13 +38,13 @@ jobs:
       run: go mod download
 
     - name: Run tests with coverage
-      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      run: go test -v -race -coverprofile="coverage.out" -covermode=atomic ./...
 
     - name: Test build compilation
       run: go build -o WinGoDarkTray-test.exe .
 
     - name: Generate coverage report
-      run: go tool cover -html=coverage.out -o coverage.html
+      run: go tool cover -html="coverage.out" -o "coverage.html"
 
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@v4
@@ -67,7 +67,7 @@ jobs:
 
     - name: Check coverage threshold
       run: |
-        $coverage = go tool cover -func=coverage.out | Select-String "total:" | ForEach-Object { ($_ -split "\s+")[-1] }
+        $coverage = go tool cover -func="coverage.out" | Select-String "total:" | ForEach-Object { ($_ -split "\s+")[-1] }
         $coverageNum = [float]($coverage -replace "%", "")
         Write-Host "Total coverage: $coverage"
         if ($coverageNum -lt 70) {
@@ -159,9 +159,6 @@ jobs:
       with:
         version: latest
         args: --timeout=5m
-        skip-cache: false
-        skip-pkg-cache: false
-        skip-build-cache: false
 
     - name: Check formatting
       run: |
