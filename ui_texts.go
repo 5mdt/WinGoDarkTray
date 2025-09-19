@@ -1,3 +1,5 @@
+// ui_texts.go
+
 package main
 
 var menuTitles = struct {

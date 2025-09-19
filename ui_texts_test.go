@@ -1,3 +1,5 @@
+// ui_texts_test.go
+
 package main
 
 import (

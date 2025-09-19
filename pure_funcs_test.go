@@ -1,3 +1,5 @@
+// pure_funcs_test.go
+
 package main
 
 import (

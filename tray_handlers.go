@@ -1,3 +1,8 @@
+// tray_handlers.go
+
+//go:build windows
+// +build windows
+
 package main
 
 import "github.com/getlantern/systray"

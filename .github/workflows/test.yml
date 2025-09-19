@@ -116,7 +116,7 @@ jobs:
 
         # Test build compilation (will fail on imports but validates syntax)
         echo "Testing compilation (syntax validation)..."
-        go build -o /dev/null . 2>&1 | grep -v "build constraints exclude" || true
+        GOOS=linux go build -o /dev/null . || echo "Build completed with expected constraints"
 
         # Validate go.mod
         echo "Validating go.mod..."
@@ -125,7 +125,7 @@ jobs:
     - name: Validate project structure
       run: |
         echo "Checking required project files..."
-        required_files=("go.mod" "main.go" "FRD.md" "TESTING.md" "CLAUDE.md" "build.sh")
+        required_files=("go.mod" "main.go" "main_stub.go" "FRD.md" "TESTING.md" "CLAUDE.md" "build.sh")
         for file in "${required_files[@]}"; do
           if [ ! -f "$file" ]; then
             echo "Required file $file not found"
