@@ -1,5 +1,6 @@
 .*
 *.exe
+*.syso
 build/
 
 !.codecov.yml
