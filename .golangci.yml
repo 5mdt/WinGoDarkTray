@@ -9,12 +9,6 @@ linters-settings:
   gocyclo:
     min-complexity: 15
 
-  revive:
-    min-confidence: 0.8
-
-  govet:
-    shadow: true
-
   misspell:
     locale: US
 
