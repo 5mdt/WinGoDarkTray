@@ -1,0 +1,44 @@
+# .codecov.yml
+
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 5%
+        base: auto
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+
+  ignore:
+    - "**/*_test.go"
+    - "**/testdata/**"
+    - "build/**"
+    - "_assets/**"
+
+flags:
+  windows:
+    paths:
+      - "."
+    carryforward: true
+
+comment:
+  layout: "header, diff, flags, files, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+github_checks:
+  annotations: true

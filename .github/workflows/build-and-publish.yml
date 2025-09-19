@@ -10,8 +10,15 @@ on:
     types: [published]
 
 jobs:
+  test:
+    name: Run Tests Before Build
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
   build:
+    name: Build Release Artifacts
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
     - name: Checkout code
@@ -33,7 +40,10 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Install dependencies
-      run: go mod tidy
+      run: go mod download
+
+    - name: Verify dependencies
+      run: go mod verify
 
     - name: Set version from git tag
       run: echo "VERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
@@ -45,6 +55,23 @@ jobs:
       run: ./build.sh
       env:
         VERSION: ${{ env.VERSION }}
+
+    - name: Verify build artifacts
+      run: |
+        ls -la ./build/
+        if [ ! -f "./build/WinGoDarkTray-x64.exe" ]; then
+          echo "Error: x64 executable not found"
+          exit 1
+        fi
+        if [ ! -f "./build/WinGoDarkTray-x32.exe" ]; then
+          echo "Error: x32 executable not found"
+          exit 1
+        fi
+        if [ ! -f "./build/WinGoDarkTray-arm64.exe" ]; then
+          echo "Error: ARM64 executable not found"
+          exit 1
+        fi
+        echo "All build artifacts verified successfully"
 
     - name: Upload Windows Executables to Release
       if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
@@ -60,6 +87,7 @@ jobs:
         updateOnlyUnreleased: true
 
     - name: VirusTotal Scan
+      if: secrets.VT_API_KEY != ''
       uses: crazy-max/ghaction-virustotal@v4
       with:
         vt_api_key: ${{ secrets.VT_API_KEY }}
@@ -67,3 +95,19 @@ jobs:
           ./build/WinGoDarkTray-x32.exe
           ./build/WinGoDarkTray-x64.exe
           ./build/WinGoDarkTray-arm64.exe
+
+    - name: Generate checksums
+      run: |
+        cd ./build/
+        sha256sum *.exe > checksums.txt
+        cat checksums.txt
+
+    - name: Upload checksums to release
+      if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: './build/checksums.txt'
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        omitNameDuringUpdate: true

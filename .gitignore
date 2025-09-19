@@ -1,2 +1,8 @@
+.*
 *.exe
 build/
+
+!.codecov.yml
+!.github/
+!.golangci.yml
+!.pre-commit-config.yml

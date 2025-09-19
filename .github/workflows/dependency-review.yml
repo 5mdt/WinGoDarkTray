@@ -1,0 +1,69 @@
+# dependency-review.yml
+
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: Review Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      with:
+        comment-summary-in-pr: always
+        fail-on-severity: moderate
+        fail-on-scopes: runtime
+        base-ref: ${{ github.event.pull_request.base.sha }}
+        head-ref: ${{ github.event.pull_request.head.sha }}
+
+  license-check:
+    name: License Compatibility Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Install go-licenses
+      run: go install github.com/google/go-licenses@latest
+
+    - name: Check licenses
+      run: |
+        echo "Checking licenses for all dependencies..."
+        go-licenses report ./... --template licenses.tpl > licenses-report.txt || true
+
+        # Check for incompatible licenses (add more as needed)
+        INCOMPATIBLE_LICENSES=("GPL-3.0" "AGPL-3.0" "LGPL-3.0")
+
+        for license in "${INCOMPATIBLE_LICENSES[@]}"; do
+          if grep -q "$license" licenses-report.txt; then
+            echo "WARNING: Found potentially incompatible license: $license"
+            grep "$license" licenses-report.txt
+          fi
+        done
+
+        echo "License check completed. See licenses-report.txt for details."
+
+    - name: Upload license report
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-report
+        path: licenses-report.txt
+        retention-days: 30

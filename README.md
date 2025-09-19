@@ -1,6 +1,13 @@
 
 # WinGoDarkTray
 
+[![Test Suite](https://github.com/5mdt/WinGoDarkTray/actions/workflows/test.yml/badge.svg)](https://github.com/5mdt/WinGoDarkTray/actions/workflows/test.yml)
+[![Build and Publish](https://github.com/5mdt/WinGoDarkTray/actions/workflows/build-and-publish.yml/badge.svg)](https://github.com/5mdt/WinGoDarkTray/actions/workflows/build-and-publish.yml)
+[![Security Scan](https://github.com/5mdt/WinGoDarkTray/actions/workflows/security.yml/badge.svg)](https://github.com/5mdt/WinGoDarkTray/actions/workflows/security.yml)
+
+[![codecov](https://codecov.io/gh/5mdt/WinGoDarkTray/branch/main/graph/badge.svg)](https://codecov.io/gh/5mdt/WinGoDarkTray)
+[![Go Report Card](https://goreportcard.com/badge/github.com/5mdt/WinGoDarkTray)](https://goreportcard.com/report/github.com/5mdt/WinGoDarkTray)
+
 ![Screenshot of WinGoDarkTray theme: pop-up menu in system tray with "Toggle app mode," "Enable Autorun," and "Quit" entries](./_assets/Screenshot.png)
 
 **WinGoDarkTray** is a simple Go-based app that resides in your system tray and lets you toggle between light and dark themes for Windows, apps, and system-wide preferences with just a click.

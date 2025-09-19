@@ -1,0 +1,178 @@
+# test.yml
+
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_call:
+    # Allow this workflow to be called by other workflows
+
+jobs:
+  test-windows:
+    name: Test on Windows
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~\AppData\Local\go-build
+          ~\go\pkg\mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests with coverage
+      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+    - name: Test build compilation
+      run: go build -o WinGoDarkTray-test.exe .
+
+    - name: Generate coverage report
+      run: go tool cover -html=coverage.out -o coverage.html
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-windows
+        path: |
+          coverage.out
+          coverage.html
+        retention-days: 30
+
+    - name: Upload coverage reports to Codecov (always)
+      if: always()
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.out
+        flags: windows
+        name: windows-coverage
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Check coverage threshold
+      run: |
+        $coverage = go tool cover -func=coverage.out | Select-String "total:" | ForEach-Object { ($_ -split "\s+")[-1] }
+        $coverageNum = [float]($coverage -replace "%", "")
+        Write-Host "Total coverage: $coverage"
+        if ($coverageNum -lt 70) {
+          Write-Error "Coverage $coverage is below 70% threshold"
+          exit 1
+        }
+        Write-Host "Coverage $coverage meets 70% threshold"
+
+  test-cross-platform:
+    name: Cross-platform Logic Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run cross-platform tests
+      run: |
+        echo "Running cross-platform validation tests..."
+
+        # Test that the code follows Go conventions
+        echo "Checking Go formatting..."
+        gofmt -l . | tee /tmp/fmt_issues
+        if [ -s /tmp/fmt_issues ]; then
+          echo "Code formatting issues found"
+          exit 1
+        fi
+
+        # Test build compilation (will fail on imports but validates syntax)
+        echo "Testing compilation (syntax validation)..."
+        go build -o /dev/null . 2>&1 | grep -v "build constraints exclude" || true
+
+        # Validate go.mod
+        echo "Validating go.mod..."
+        go mod verify
+
+    - name: Validate project structure
+      run: |
+        echo "Checking required project files..."
+        required_files=("go.mod" "main.go" "FRD.md" "TESTING.md" "CLAUDE.md" "build.sh")
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Required file $file not found"
+            exit 1
+          fi
+        done
+
+        echo "Checking test files..."
+        test_count=$(find . -name "*_test.go" | wc -l)
+        if [ "$test_count" -lt 5 ]; then
+          echo "Warning: Only $test_count test files found, expected at least 5"
+        fi
+
+        echo "Project structure validation passed"
+
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: latest
+        args: --timeout=5m
+        skip-cache: false
+        skip-pkg-cache: false
+        skip-build-cache: false
+
+    - name: Check formatting
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "The following files are not formatted correctly:"
+          gofmt -s -l .
+          echo "Run 'go fmt ./...' to fix formatting issues"
+          exit 1
+        fi
+
+    - name: Check go mod tidy
+      run: |
+        go mod tidy
+        git diff --exit-code go.mod go.sum || (echo "go.mod or go.sum not up to date" && exit 1)

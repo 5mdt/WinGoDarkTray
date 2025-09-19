@@ -1,0 +1,74 @@
+# .golangci.yml
+
+run:
+  timeout: 5m
+  build-tags:
+    - windows
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+  golint:
+    min-confidence: 0.8
+
+  govet:
+    check-shadowing: true
+
+  misspell:
+    locale: US
+
+  unused:
+    check-exported: false
+
+linters:
+  enable:
+    - errcheck
+    - goimports
+    - golint
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - typecheck
+    - unused
+    - varcheck
+    - deadcode
+    - structcheck
+    - gocyclo
+    - gofmt
+    - revive
+
+  disable:
+    - gosec  # Windows registry operations trigger security warnings
+    - maligned  # Struct alignment not critical for this app
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+
+    # Exclude Windows-specific code from cross-platform linting issues
+    - path: ".*\\.go"
+      text: "windows"
+      linters:
+        - goimports
+
+    # Allow long lines in test files
+    - path: _test\.go
+      linters:
+        - lll
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

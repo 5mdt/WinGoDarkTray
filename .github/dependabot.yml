@@ -5,7 +5,39 @@ updates:
   - package-ecosystem: "go"
     directory: "/"  # Location of go.mod file
     schedule:
-      interval: "weekly"  # Options: "daily", "weekly", "monthly"
+      interval: "weekly"  # Check for updates weekly
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
     commit-message:
-      prefix: "deps"  # Default commit message prefix ("deps")
+      prefix: "deps"  # Commit message prefix
+      include: "scope"
     versioning-strategy: "increase"  # Options: "increase", "lockfile-only", "auto"
+    reviewers:
+      - "nett00n"
+    assignees:
+      - "nett00n"
+    labels:
+      - "dependencies"
+      - "go"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    reviewers:
+      - "nett00n"
+    assignees:
+      - "nett00n"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 3
