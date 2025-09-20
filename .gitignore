@@ -2,7 +2,8 @@
 *.exe
 *.syso
 build/
-coverage.*
+coverage*.html
+coverage*.out
 
 !.codecov.yml
 !.github/

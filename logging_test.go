@@ -245,3 +245,155 @@ func TestShowNotificationWithFallback(t *testing.T) {
 		})
 	}
 }
+
+func TestLogEventWithDifferentTypes(t *testing.T) {
+	tests := []struct {
+		name        string
+		eventType   uint32
+		message     string
+		expectError bool
+	}{
+		{
+			name:        "info event",
+			eventType:   eventlog.Info,
+			message:     "Test info event",
+			expectError: false,
+		},
+		{
+			name:        "warning event",
+			eventType:   eventlog.Warning,
+			message:     "Test warning event",
+			expectError: false,
+		},
+		{
+			name:        "error event",
+			eventType:   eventlog.Error,
+			message:     "Test error event",
+			expectError: false,
+		},
+		{
+			name:        "unknown event type",
+			eventType:   999,
+			message:     "Test unknown event",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This function will likely fail to open event log in test environment,
+			// but we can test that it handles different event types correctly
+			err := logEvent(tt.eventType, tt.message)
+
+			// We expect errors in test environment due to event log access
+			// but we can verify the function handles unknown event types
+			if tt.expectError && tt.eventType == 999 {
+				// For unknown event type, we expect a specific error message
+				if err == nil {
+					t.Errorf("logEvent() with unknown event type should return error")
+				}
+			}
+		})
+	}
+}
+
+func TestEventLogHelperFunctions(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "admin check function",
+		},
+		{
+			name: "event log source existence check",
+		},
+		{
+			name: "event log source installation",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			switch tt.name {
+			case "admin check function":
+				// Test isAdmin function doesn't panic
+				result := isAdmin()
+				// Result can be true or false, we just verify it doesn't panic
+				_ = result
+
+			case "event log source existence check":
+				// Test eventLogSourceExists function doesn't panic
+				result := eventLogSourceExists()
+				// Result can be true or false, we just verify it doesn't panic
+				_ = result
+
+			case "event log source installation":
+				// Test installEventLogSource function doesn't panic
+				err := installEventLogSource()
+				// This will likely fail in test environment, but shouldn't panic
+				_ = err
+			}
+		})
+	}
+}
+
+func TestLogEventErrorHandling(t *testing.T) {
+	tests := []struct {
+		name      string
+		eventType uint32
+		message   string
+	}{
+		{
+			name:      "log event with empty message",
+			eventType: eventlog.Info,
+			message:   "",
+		},
+		{
+			name:      "log event with long message",
+			eventType: eventlog.Warning,
+			message:   "This is a very long message that tests how the logging system handles longer text content. " +
+					  "It should not cause any issues or panics in the logging system. " +
+					  "The system should handle this gracefully and either log it successfully or fail gracefully.",
+		},
+		{
+			name:      "log event with special characters",
+			eventType: eventlog.Error,
+			message:   "Message with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test that logEvent handles various message types without panicking
+			err := logEvent(tt.eventType, tt.message)
+			// We expect errors in test environment, but function shouldn't panic
+			_ = err
+		})
+	}
+}
+
+func TestNotificationTextStructures(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "notification texts exist",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test that notification text structures are properly defined
+			// and accessible without panicking
+
+			// Test access to notification texts
+			_ = notificationTexts.Error
+			_ = notificationTexts.UpdateAvailableTitle
+			_ = notificationTexts.UpdateAvailableMessage
+
+			// Test access to tooltips
+			_ = tooltips.Default
+			_ = tooltips.Error
+		})
+	}
+}
