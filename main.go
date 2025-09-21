@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -95,14 +96,23 @@ func (a *App) initializeMenuState(autorunItem *systray.MenuItem) {
 }
 
 func (a *App) startEventHandlers(autorunItem, quitItem *systray.MenuItem) {
+	a.startEventHandlersWithContext(context.Background(), autorunItem, quitItem)
+}
+
+func (a *App) startEventHandlersWithContext(ctx context.Context, autorunItem, quitItem *systray.MenuItem) {
 	quitCh := make(chan struct{})
 	go func() {
-		<-quitItem.ClickedCh
-		close(quitCh)
-		systray.Quit()
+		select {
+		case <-ctx.Done():
+			close(quitCh)
+			return
+		case <-quitItem.ClickedCh:
+			close(quitCh)
+			systray.Quit()
+		}
 	}()
 
-	go a.handleMenuItemClicks(autorunItem, quitItem)
-	go checkForUpdate(a.version, a.updateNowItem)
-	go startUpdateClickHandler(a.updateNowItem, quitCh)
+	go a.handleMenuItemClicksWithContext(ctx, autorunItem, quitItem)
+	go checkForUpdateWithContext(ctx, a.version, a.updateNowItem)
+	go startUpdateClickHandlerWithContext(ctx, a.updateNowItem, quitCh)
 }

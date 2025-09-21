@@ -5,11 +5,21 @@
 
 package main
 
-import "github.com/getlantern/systray"
+import (
+	"context"
+
+	"github.com/getlantern/systray"
+)
 
 func (a *App) handleMenuItemClicks(autorunItem, quitItem *systray.MenuItem) {
+	a.handleMenuItemClicksWithContext(context.Background(), autorunItem, quitItem)
+}
+
+func (a *App) handleMenuItemClicksWithContext(ctx context.Context, autorunItem, quitItem *systray.MenuItem) {
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-a.toggleSystemItem.ClickedCh:
 			a.toggleSystemMode()
 		case <-a.toggleAppItem.ClickedCh:

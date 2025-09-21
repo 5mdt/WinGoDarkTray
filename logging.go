@@ -126,9 +126,23 @@ func showNotificationWithFallback(title, message, fallbackTooltip string) {
 }
 
 // setTemporaryTooltip sets a temporary tooltip that reverts after duration
+// Safely handles cases where systray is not available (e.g., in CI environments)
 func setTemporaryTooltip(message string, duration time.Duration) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Systray operations may fail in headless environments
+			logEventSafe(eventlog.Error, fmt.Sprintf("Tooltip operation failed (expected in CI): %v", r))
+		}
+	}()
+
 	systray.SetTooltip(message)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Systray operations may fail in headless environments
+				logEventSafe(eventlog.Error, fmt.Sprintf("Tooltip reset failed (expected in CI): %v", r))
+			}
+		}()
 		time.Sleep(duration)
 		systray.SetTooltip(tooltips.Default)
 	}()

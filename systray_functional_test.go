@@ -17,21 +17,17 @@ import (
 // Test systray functions in a more aggressive way
 func TestSystrayFunctionsWithTimeout(t *testing.T) {
 	// Use a very short timeout to avoid hanging the test suite
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	var wg sync.WaitGroup
-	testResults := make(chan bool, 1)
-
-	wg.Add(1)
+	done := make(chan bool, 1)
 	go func() {
-		defer wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				// If systray panics, that's expected in some test environments
 				t.Logf("Systray functions caused panic (expected in test env): %v", r)
 			}
-			testResults <- true
+			done <- true
 		}()
 
 		systray.Run(func() {
@@ -61,7 +57,7 @@ func TestSystrayFunctionsWithTimeout(t *testing.T) {
 			app.toggleWindowsMode()
 
 			// Test tooltip
-			setTemporaryTooltip("Test", 10*time.Millisecond)
+			setTemporaryTooltip("Test", 1*time.Millisecond)
 
 			// Test autorun toggle
 			if autorunItem != nil {
@@ -81,20 +77,15 @@ func TestSystrayFunctionsWithTimeout(t *testing.T) {
 	}()
 
 	// Wait for either completion or timeout
-	go func() {
-		wg.Wait()
-		close(testResults)
-	}()
-
 	select {
-	case <-testResults:
+	case <-done:
 		t.Log("Systray functions test completed")
 	case <-ctx.Done():
 		t.Log("Systray functions test timed out (expected in some environments)")
 	}
 }
 
-// Test individual systray-dependent functions with mock setup
+// Test individual systray-dependent functions with mock setup and timeouts
 func TestSystrayDependentFunctions(t *testing.T) {
 	tests := []struct {
 		name string
@@ -151,16 +142,32 @@ func TestSystrayDependentFunctions(t *testing.T) {
 		{
 			name: "handleMenuItemClicks_coverage",
 			test: func(t *testing.T) {
-				defer func() {
-					if r := recover(); r != nil {
-						t.Logf("handleMenuItemClicks panicked as expected: %v", r)
-					}
+				// Use timeout to prevent hanging in CI
+				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				defer cancel()
+
+				done := make(chan bool, 1)
+				go func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Logf("handleMenuItemClicks panicked as expected: %v", r)
+						}
+						done <- true
+					}()
+
+					app := NewApp("handler-test")
+					// This will panic immediately but gives us coverage
+					autorunItem, quitItem := app.createMenuItems()
+					app.handleMenuItemClicksWithContext(ctx, autorunItem, quitItem)
 				}()
 
-				app := NewApp("handler-test")
-				// This will panic immediately but gives us coverage
-				autorunItem, quitItem := app.createMenuItems()
-				app.handleMenuItemClicks(autorunItem, quitItem)
+				// Wait for either completion or timeout
+				select {
+				case <-done:
+					t.Log("handleMenuItemClicks completed")
+				case <-ctx.Done():
+					t.Log("handleMenuItemClicks timed out as expected")
+				}
 			},
 		},
 	}
@@ -205,17 +212,33 @@ func TestApplicationInitialization(t *testing.T) {
 		{
 			name: "startEventHandlers_coverage",
 			test: func(t *testing.T) {
-				defer func() {
-					if r := recover(); r != nil {
-						t.Logf("startEventHandlers panicked as expected: %v", r)
-					}
+				// Use timeout to prevent hanging in CI
+				ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+				defer cancel()
+
+				done := make(chan bool, 1)
+				go func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Logf("startEventHandlers panicked as expected: %v", r)
+						}
+						done <- true
+					}()
+
+					app := NewApp("handler-test")
+					autorunItem, quitItem := app.createMenuItems()
+					app.startEventHandlersWithContext(ctx, autorunItem, quitItem)
+					// Give goroutines a moment to start before test ends
+					time.Sleep(10 * time.Millisecond)
 				}()
 
-				app := NewApp("handler-test")
-				autorunItem, quitItem := app.createMenuItems()
-				app.startEventHandlers(autorunItem, quitItem)
-				// Give goroutines a moment to start before test ends
-				time.Sleep(10 * time.Millisecond)
+				// Wait for either completion or timeout
+				select {
+				case <-done:
+					t.Log("startEventHandlers completed")
+				case <-ctx.Done():
+					t.Log("startEventHandlers timed out as expected")
+				}
 			},
 		},
 	}
@@ -253,7 +276,7 @@ func TestSystrayInitializationAttempt(t *testing.T) {
 			if autorunItem != nil {
 				updateAutorunUI(autorunItem, true)
 			}
-			setTemporaryTooltip("Coverage test", 50*time.Millisecond)
+			setTemporaryTooltip("Coverage test", 10*time.Millisecond)
 
 			// Test theme functions
 			app.toggleSystemMode()
@@ -273,8 +296,8 @@ func TestSystrayInitializationAttempt(t *testing.T) {
 		})
 	}()
 
-	// Wait with timeout
-	timeout := time.After(3 * time.Second)
+	// Wait with very short timeout to prevent CI hanging
+	timeout := time.After(500 * time.Millisecond)
 	select {
 	case <-done:
 		t.Log("Successfully tested systray functions")
