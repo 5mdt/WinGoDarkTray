@@ -15,9 +15,9 @@ import (
 
 func TestUpdateAutorunUI(t *testing.T) {
 	tests := []struct {
-		name           string
-		enabled        bool
-		expectedTitle  string
+		name          string
+		enabled       bool
+		expectedTitle string
 	}{
 		{
 			name:          "enabled autorun",

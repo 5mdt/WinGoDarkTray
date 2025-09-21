@@ -160,9 +160,9 @@ func TestRunUpdateCommand(t *testing.T) {
 // Test helper functions for version processing
 func TestVersionProcessingInUpdater(t *testing.T) {
 	tests := []struct {
-		name        string
-		tagName     string
-		expected    string
+		name     string
+		tagName  string
+		expected string
 	}{
 		{
 			name:     "version with v prefix",

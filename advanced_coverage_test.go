@@ -277,19 +277,19 @@ func TestMaxAdvanced(t *testing.T) {
 // TestOpenRegistryKeyAdvanced validates registry key opening with different access levels
 func TestOpenRegistryKeyAdvanced(t *testing.T) {
 	tests := []struct {
-		name   string
+		name    string
 		keyPath string
-		access uint32
+		access  uint32
 	}{
 		{
-			name:   "query access to theme registry",
+			name:    "query access to theme registry",
 			keyPath: `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`,
-			access: 0x20019,
+			access:  0x20019,
 		},
 		{
-			name:   "read access to theme registry",
+			name:    "read access to theme registry",
 			keyPath: `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`,
-			access: 0x20019,
+			access:  0x20019,
 		},
 	}
 

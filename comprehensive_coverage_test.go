@@ -57,13 +57,12 @@ func TestLoggingComprehensiveCoverage(t *testing.T) {
 // TestUpdaterComprehensiveCoverage validates update functionality (skipped due to systray dependency)
 func TestUpdaterComprehensiveCoverage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			response := `{"tag_name": "v1.1.0", "html_url": "https://github.com/test/repo/releases/tag/v1.1.0"}`
+		response := `{"tag_name": "v1.1.0", "html_url": "https://github.com/test/repo/releases/tag/v1.1.0"}`
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(response))
 	}))
 	defer server.Close()
-
 
 	tests := []struct {
 		name           string

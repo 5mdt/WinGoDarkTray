@@ -206,15 +206,15 @@ func TestSetupEventLogExtended(t *testing.T) {
 // TestThemeToggleEdgeCases validates theme toggle operations with different registry keys
 func TestThemeToggleEdgeCases(t *testing.T) {
 	tests := []struct {
-		name     string
+		name        string
 		registryKey string
 	}{
 		{
-			name:     "toggle_apps_theme",
+			name:        "toggle_apps_theme",
 			registryKey: regValAppsUseLight,
 		},
 		{
-			name:     "toggle_system_theme",
+			name:        "toggle_system_theme",
 			registryKey: regValSystemUsesLight,
 		},
 	}
@@ -239,19 +239,19 @@ func TestThemeToggleEdgeCases(t *testing.T) {
 // TestUpdaterEdgeCases validates update functionality with various version formats
 func TestUpdaterEdgeCases(t *testing.T) {
 	tests := []struct {
-		name string
+		name    string
 		version string
 	}{
 		{
-			name: "update_check_with_malformed_version",
+			name:    "update_check_with_malformed_version",
 			version: "invalid-version",
 		},
 		{
-			name: "update_check_with_empty_version",
+			name:    "update_check_with_empty_version",
 			version: "",
 		},
 		{
-			name: "update_check_with_future_version",
+			name:    "update_check_with_future_version",
 			version: "v999.999.999",
 		},
 	}

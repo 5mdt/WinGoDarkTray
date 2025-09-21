@@ -219,10 +219,10 @@ func TestSetTemporaryTooltip(t *testing.T) {
 
 func TestShowNotificationWithFallback(t *testing.T) {
 	tests := []struct {
-		name             string
-		title            string
-		message          string
-		fallbackTooltip  string
+		name            string
+		title           string
+		message         string
+		fallbackTooltip string
 	}{
 		{
 			name:            "simple notification",
@@ -351,9 +351,9 @@ func TestLogEventErrorHandling(t *testing.T) {
 		{
 			name:      "log event with long message",
 			eventType: eventlog.Warning,
-			message:   "This is a very long message that tests how the logging system handles longer text content. " +
-					  "It should not cause any issues or panics in the logging system. " +
-					  "The system should handle this gracefully and either log it successfully or fail gracefully.",
+			message: "This is a very long message that tests how the logging system handles longer text content. " +
+				"It should not cause any issues or panics in the logging system. " +
+				"The system should handle this gracefully and either log it successfully or fail gracefully.",
 		},
 		{
 			name:      "log event with special characters",

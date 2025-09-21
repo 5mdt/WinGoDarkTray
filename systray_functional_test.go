@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
