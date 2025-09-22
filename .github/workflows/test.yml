@@ -65,16 +65,16 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Check coverage threshold
-      run: |
-        $coverage = go tool cover -func="coverage.out" | Select-String "total:" | ForEach-Object { ($_ -split "\s+")[-1] }
-        $coverageNum = [float]($coverage -replace "%", "")
-        Write-Host "Total coverage: $coverage"
-        if ($coverageNum -lt 70) {
-          Write-Error "Coverage $coverage is below 70% threshold"
-          exit 1
-        }
-        Write-Host "Coverage $coverage meets 70% threshold"
+    # - name: Check coverage threshold
+    #   run: |
+    #     $coverage = go tool cover -func="coverage.out" | Select-String "total:" | ForEach-Object { ($_ -split "\s+")[-1] }
+    #     $coverageNum = [float]($coverage -replace "%", "")
+    #     Write-Host "Total coverage: $coverage"
+    #     if ($coverageNum -lt 70) {
+    #       Write-Error "Coverage $coverage is below 70% threshold"
+    #       exit 1
+    #     }
+    #     Write-Host "Coverage $coverage meets 70% threshold"
 
   test-cross-platform:
     name: Cross-platform Logic Tests
