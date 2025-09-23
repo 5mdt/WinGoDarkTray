@@ -1,6 +1,12 @@
+// updater.go
+
+//go:build windows
+// +build windows
+
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,9 +23,16 @@ const githubReleasesAPI = "https://api.github.com/repos/5mdt/WinGoDarkTray/relea
 
 // startUpdateClickHandler starts a goroutine to handle update button clicks
 func startUpdateClickHandler(updateNowItem *systray.MenuItem, quitCh chan struct{}) {
+	startUpdateClickHandlerWithContext(context.Background(), updateNowItem, quitCh)
+}
+
+// startUpdateClickHandlerWithContext starts a goroutine to handle update button clicks with context
+func startUpdateClickHandlerWithContext(ctx context.Context, updateNowItem *systray.MenuItem, quitCh chan struct{}) {
 	go func() {
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-updateNowItem.ClickedCh:
 				runUpdateCommand()
 			case <-quitCh:
@@ -30,6 +43,10 @@ func startUpdateClickHandler(updateNowItem *systray.MenuItem, quitCh chan struct
 }
 
 func checkForUpdate(currentVersion string, updateNowItem *systray.MenuItem) {
+	checkForUpdateWithContext(context.Background(), currentVersion, updateNowItem)
+}
+
+func checkForUpdateWithContext(ctx context.Context, currentVersion string, updateNowItem *systray.MenuItem) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(githubReleasesAPI)
 	if err != nil {

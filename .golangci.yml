@@ -1,0 +1,10 @@
+# .golangci.yml
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet

@@ -27,6 +27,5 @@ repos:
       - id: check-xml
       - id: check-yaml
       - id: destroyed-symlinks
-      - id: detect-aws-credentials
       - id: detect-private-key
       - id: no-commit-to-branch

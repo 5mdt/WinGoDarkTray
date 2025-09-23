@@ -1,2 +1,11 @@
+.*
 *.exe
+*.syso
 build/
+coverage*.html
+coverage*.out
+
+!.codecov.yml
+!.github/
+!.golangci.yml
+!.pre-commit-config.yml
